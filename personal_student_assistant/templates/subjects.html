@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Subjects - Smart Study Planner</title>
+    <style>
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            --primary: #007BFF;
+            --primary-d: #0056b3;
+            --primary-l: #e6f0ff;
+            --bg: #f0f4f8;
+            --white: #fff;
+            --text: #333;
+            --muted: #6c757d;
+            --success: #28a745;
+            --danger: #dc3545;
+            --sidebar-w: 240px;
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: var(--sidebar-w);
+            background: linear-gradient(180deg, #0056b3, #003d82);
+            color: white;
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            z-index: 100;
+        }
+
+        .sidebar-brand {
+            padding: 24px 20px 20px;
+            font-size: 18px;
+            font-weight: 700;
+            border-bottom: 1px solid rgba(255, 255, 255, .15);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .nav-section {
+            padding: 16px 12px 8px;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: rgba(255, 255, 255, .5);
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 11px 20px;
+            text-decoration: none;
+            color: rgba(255, 255, 255, .85);
+            font-size: 14px;
+            border-radius: 8px;
+            margin: 2px 8px;
+            transition: background .2s;
+        }
+
+        .nav-item:hover,
+        .nav-item.active {
+            background: rgba(255, 255, 255, .15);
+            color: white;
+        }
+
+        .nav-item .icon {
+            font-size: 17px;
+            width: 22px;
+            text-align: center;
+        }
+
+        .sidebar-footer {
+            margin-top: auto;
+            padding: 16px 20px;
+            border-top: 1px solid rgba(255, 255, 255, .15);
+            font-size: 13px;
+            color: rgba(255, 255, 255, .7);
+        }
+
+        .sidebar-footer .user-name {
+            font-weight: 600;
+            color: white;
+        }
+
+        .main {
+            margin-left: var(--sidebar-w);
+            flex: 1;
+        }
+
+        .topbar {
+            background: var(--white);
+            border-bottom: 1px solid #dee2e6;
+            padding: 14px 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+        }
+
+        .topbar h1 {
+            font-size: 20px;
+            color: var(--primary-d);
+            font-weight: 700;
+        }
+
+        .btn-logout {
+            background: var(--primary-l);
+            color: var(--primary-d);
+            border: none;
+            padding: 7px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 13px;
+            text-decoration: none;
+        }
+
+        .content {
+            padding: 28px 32px;
+        }
+
+        .card {
+            background: var(--white);
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, .07);
+            margin-bottom: 24px;
+        }
+
+        .card-header {
+            padding: 18px 22px 14px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .card-header h2 {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--primary-d);
+        }
+
+        .card-body {
+            padding: 20px 22px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 140px 100px 48px;
+            gap: 12px;
+            align-items: end;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .form-group label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: .5px;
+        }
+
+        .form-group input,
+        .form-group select {
+            padding: 9px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .btn-add {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 6px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            height: 30px;
+        }
+
+        .btn-add:hover {
+            background: var(--primary-d);
+        }
+
+        .subjects-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 18px;
+        }
+
+        .subject-card {
+            background: var(--white);
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, .07);
+            border-top: 4px solid var(--primary);
+            overflow: hidden;
+            transition: transform .2s, box-shadow .2s;
+        }
+
+        .subject-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, .1);
+        }
+
+        .sc-header {
+            padding: 18px 20px 12px;
+        }
+
+        .sc-name {
+            font-size: 17px;
+            font-weight: 700;
+        }
+
+        .sc-meta {
+            display: flex;
+            gap: 16px;
+            margin-top: 6px;
+        }
+
+        .sc-meta span {
+            font-size: 12px;
+            color: var(--muted);
+        }
+
+        .sc-stats {
+            display: flex;
+            gap: 12px;
+            padding: 12px 20px;
+            background: #f8f9fa;
+            border-top: 1px solid #f0f0f0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .stat-box {
+            flex: 1;
+            text-align: center;
+        }
+
+        .s-val {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--primary-d);
+        }
+
+        .s-lbl {
+            font-size: 11px;
+            color: var(--muted);
+        }
+
+        .progress-wrap {
+            background: #e9ecef;
+            height: 6px;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 20px 0;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: var(--success);
+            border-radius: 10px;
+        }
+
+        .sc-footer {
+            padding: 12px 20px;
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-topics {
+            flex: 1;
+            background: var(--primary-l);
+            color: var(--primary-d);
+            border: none;
+            padding: 8px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 13px;
+            text-decoration: none;
+            text-align: center;
+        }
+
+        .btn-topics:hover {
+            background: #cfe2ff;
+        }
+
+        .btn-edit {
+            background: #fff8e6;
+            color: #856404;
+            border: 1px solid #ffd966;
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .btn-edit:hover {
+            background: #ffeeba;
+        }
+
+        .btn-delete {
+            background: #fff5f5;
+            color: var(--danger);
+            border: 1px solid #ffd0d0;
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .days-badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .urgent {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .safe {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .past {
+            background: #e2e3e5;
+            color: #383d41;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 48px;
+            color: var(--muted);
+        }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, .5);
+            z-index: 500;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-overlay.open {
+            display: flex;
+        }
+
+        .modal {
+            background: var(--white);
+            border-radius: 14px;
+            padding: 28px;
+            width: 480px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, .2);
+        }
+
+        .modal h3 {
+            font-size: 17px;
+            font-weight: 700;
+            color: var(--primary-d);
+            margin-bottom: 20px;
+        }
+
+        .modal-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+            margin-bottom: 20px;
+        }
+
+        .modal-grid .full {
+            grid-column: 1 / -1;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .btn-save {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 9px 22px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .btn-save:hover {
+            background: var(--primary-d);
+        }
+
+        .btn-cancel {
+            background: #f0f0f0;
+            color: var(--text);
+            border: none;
+            padding: 9px 22px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+        }
+    </style>
+</head>
+
+<body>
+    <aside class="sidebar">
+        <div class="sidebar-brand"><span>&#128218;</span>Study Planner</div>
+        <div class="nav-section">Main</div>
+        <a href="/" class="nav-item"><span class="icon">&#127968;</span>Dashboard</a>
+        <a href="/schedule/" class="nav-item"><span class="icon">&#128197;</span>Schedule</a>
+        <div class="nav-section">Study</div>
+        <a href="/subjects/" class="nav-item active"><span class="icon">&#128214;</span>Subjects</a>
+        <div class="nav-section">Account</div>
+        <a href="/profile/" class="nav-item"><span class="icon">&#128100;</span>Profile</a>
+        <div class="sidebar-footer">
+            <div class="user-name">{{ user.name }}</div>
+            <div>{{ user.email }}</div>
+        </div>
+    </aside>
+    <div class="main">
+        <div class="topbar">
+            <h1>Subjects</h1>
+            <a href="/logout/" class="btn-logout">Logout</a>
+        </div>
+        <div class="content">
+            <div class="card">
+                <div class="card-header">
+                    <h2>Add Subject</h2>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="add">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Subject Name</label>
+                                <input type="text" name="name" placeholder="e.g. Mathematics" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Exam Date</label>
+                                <input type="date" name="exam_date" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Importance (1-10)</label>
+                                <select name="weightage">
+                                    <option value="1">1 - Least</option>
+                                    <option value="2">2</option>
+                                    <option value="3">3</option>
+                                    <option value="4">4</option>
+                                    <option value="5" selected>5 - Medium</option>
+                                    <option value="6">6</option>
+                                    <option value="7">7</option>
+                                    <option value="8">8</option>
+                                    <option value="9">9</option>
+                                    <option value="10">10 - Most</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Color</label>
+                                <input type="color" name="color" value="#007BFF"
+                                    style="height:40px;padding:2px 6px;cursor:pointer;">
+                            </div>
+                            <button type="submit" class="btn-add">Add</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            {% if subjects %}
+            <div class="subjects-grid">
+                {% for s in subjects %}
+                <div class="subject-card" style="border-top-color:{{ s.color }}">
+                    <div class="sc-header">
+                        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+                            <div class="sc-name">{{ s.name }}</div>
+                            {% if s.days_until_exam is not None %}
+                            {% if s.days_until_exam < 0 %} <span class="days-badge past">Exam passed</span>
+                                {% elif s.days_until_exam == 0 %}
+                                <span class="days-badge urgent">Today!</span>
+                                {% elif s.days_until_exam <= 3 %} <span class="days-badge urgent">{{ s.days_until_exam
+                                    }}d left</span>
+                                    {% elif s.days_until_exam <= 7 %} <span class="days-badge warning">{{
+                                        s.days_until_exam }}d left</span>
+                                        {% else %}
+                                        <span class="days-badge safe">{{ s.days_until_exam }}d left</span>
+                                        {% endif %}
+                                        {% endif %}
+                        </div>
+                        <div class="sc-meta">
+                            <span>Exam: <strong>{{ s.exam_date }}</strong></span>
+                            <span>Weight: <strong>{{ s.weightage }}/10</strong></span>
+                        </div>
+                    </div>
+                    <div class="sc-stats">
+                        <div class="stat-box">
+                            <div class="s-val">{{ s.topic_count }}</div>
+                            <div class="s-lbl">Topics</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="s-val">{{ s.completed_count }}</div>
+                            <div class="s-lbl">Done</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="s-val">{{ s.pending_count }}</div>
+                            <div class="s-lbl">Pending</div>
+                        </div>
+                    </div>
+                    {% if s.topic_count > 0 %}
+                    <div class="progress-wrap">
+                        <div class="progress-bar" style="width:{% widthratio s.completed_count s.topic_count 100 %}%">
+                        </div>
+                    </div>
+                    {% endif %}
+                    <div class="sc-footer">
+                        <a href="/subjects/{{ s.id }}/topics/" class="btn-topics">Manage Topics</a>
+                        <button type="button" class="btn-edit"
+                            onclick="openEdit('{{ s.id }}','{{ s.name }}','{{ s.exam_date }}','{{ s.weightage }}','{{ s.color }}')">
+                            Edit
+                        </button>
+                        <form method="POST" onsubmit="return confirm('Delete subject and all its topics?')">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="delete">
+                            <input type="hidden" name="subject_id" value="{{ s.id }}">
+                            <button type="submit" class="btn-delete">Delete</button>
+                        </form>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="card">
+                <div class="empty-state">
+                    <p>No subjects yet. Add your first subject above!</p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="editModal">
+        <div class="modal">
+            <h3>Edit Subject</h3>
+            <form method="POST" id="editForm">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="edit">
+                <input type="hidden" name="subject_id" id="edit_subject_id">
+                <div class="modal-grid">
+                    <div class="form-group full">
+                        <label>Subject Name</label>
+                        <input type="text" name="name" id="edit_name" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Exam Date</label>
+                        <input type="date" name="exam_date" id="edit_exam_date" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Importance (1-10)</label>
+                        <select name="weightage" id="edit_weightage">
+                            <option value="1">1 - Least</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                            <option value="5">5 - Medium</option>
+                            <option value="6">6</option>
+                            <option value="7">7</option>
+                            <option value="8">8</option>
+                            <option value="9">9</option>
+                            <option value="10">10 - Most</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Color</label>
+                        <input type="color" name="color" id="edit_color"
+                            style="height:40px;padding:2px 6px;cursor:pointer;">
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-cancel" onclick="closeEdit()">Cancel</button>
+                    <button type="submit" class="btn-save">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function openEdit(id, name, examDate, weightage, color) {
+            document.getElementById('edit_subject_id').value = id;
+            document.getElementById('edit_name').value = name;
+            document.getElementById('edit_exam_date').value = examDate;
+            document.getElementById('edit_weightage').value = weightage;
+            document.getElementById('edit_color').value = color;
+            document.getElementById('editModal').classList.add('open');
+        }
+        function closeEdit() {
+            document.getElementById('editModal').classList.remove('open');
+        }
+        document.getElementById('editModal').addEventListener('click', function (e) {
+            if (e.target === this) closeEdit();
+        });
+    </script>
+</body>
+
+</html>

@@ -4,109 +4,534 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard</title>
+    <title>Dashboard - Smart Study Planner</title>
     <style>
-        body {
-            font-family: sans-serif;
-            background-color: #f0f4f8;
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
             margin: 0;
+            padding: 0;
         }
 
-        .navbar {
-            background-color: #007BFF;
+        :root {
+            --primary: #007BFF;
+            --primary-d: #0056b3;
+            --primary-l: #e6f0ff;
+            --bg: #f0f4f8;
+            --white: #fff;
+            --text: #333;
+            --muted: #6c757d;
+            --success: #28a745;
+            --sidebar-w: 240px;
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: var(--sidebar-w);
+            background: linear-gradient(180deg, #0056b3, #003d82);
             color: white;
-            padding: 15px 30px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            z-index: 100;
+        }
+
+        .sidebar-brand {
+            padding: 24px 20px 20px;
+            font-size: 18px;
+            font-weight: 700;
+            border-bottom: 1px solid rgba(255, 255, 255, .15);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .nav-section {
+            padding: 16px 12px 8px;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: rgba(255, 255, 255, .5);
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 11px 20px;
+            text-decoration: none;
+            color: rgba(255, 255, 255, .85);
+            font-size: 14px;
+            border-radius: 8px;
+            margin: 2px 8px;
+            transition: background .2s;
+        }
+
+        .nav-item:hover,
+        .nav-item.active {
+            background: rgba(255, 255, 255, .15);
+            color: white;
+        }
+
+        .nav-item .icon {
+            font-size: 17px;
+            width: 22px;
+            text-align: center;
+        }
+
+        .sidebar-footer {
+            margin-top: auto;
+            padding: 16px 20px;
+            border-top: 1px solid rgba(255, 255, 255, .15);
+            font-size: 13px;
+            color: rgba(255, 255, 255, .7);
+        }
+
+        .sidebar-footer .user-name {
+            font-weight: 600;
+            color: white;
+        }
+
+        .main {
+            margin-left: var(--sidebar-w);
+            flex: 1;
+        }
+
+        .topbar {
+            background: var(--white);
+            border-bottom: 1px solid #dee2e6;
+            padding: 14px 32px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 50;
         }
 
-        .navbar-brand {
+        .topbar h1 {
             font-size: 20px;
-            font-weight: bold;
+            color: var(--primary-d);
+            font-weight: 700;
         }
 
-        .navbar-user {
+        .topbar-right {
             display: flex;
             align-items: center;
-            gap: 15px;
+            gap: 14px;
+            font-size: 14px;
+            color: var(--muted);
         }
 
-        .logout-btn {
-            background-color: white;
-            color: #007BFF;
+        .btn-logout {
+            background: var(--primary-l);
+            color: var(--primary-d);
             border: none;
-            padding: 8px 15px;
-            border-radius: 4px;
+            padding: 7px 14px;
+            border-radius: 6px;
             cursor: pointer;
-            font-weight: bold;
+            font-weight: 600;
+            font-size: 13px;
             text-decoration: none;
         }
 
-        .logout-btn:hover {
-            background-color: #e6f0ff;
+        .btn-logout:hover {
+            background: #cfe2ff;
         }
 
         .content {
-            padding: 40px;
-            display: flex;
-            justify-content: center;
+            padding: 28px 32px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 18px;
+            margin-bottom: 28px;
+        }
+
+        .stat-card {
+            background: var(--white);
+            border-radius: 12px;
+            padding: 20px 22px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, .07);
+        }
+
+        .stat-label {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: .8px;
+            color: var(--muted);
+        }
+
+        .stat-val {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--primary-d);
+            margin: 4px 0;
+        }
+
+        .stat-sub {
+            font-size: 12px;
+            color: var(--muted);
+        }
+
+        .stat-card.green .stat-val {
+            color: var(--success);
+        }
+
+        .stat-card.orange .stat-val {
+            color: #e67e00;
+        }
+
+        .progress-wrap {
+            background: #e9ecef;
+            border-radius: 10px;
+            height: 8px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: var(--primary);
+            border-radius: 10px;
+        }
+
+        .two-col {
+            display: grid;
+            grid-template-columns: 1fr 380px;
+            gap: 22px;
         }
 
         .card {
-            background-color: white;
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            width: 100%;
-            max-width: 600px;
+            background: var(--white);
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, .07);
         }
 
-        h2 {
-            color: #0056b3;
-            margin-top: 0;
+        .card-header {
+            padding: 18px 22px 14px;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
-        .info-group {
-            margin-bottom: 15px;
+        .card-header h2 {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--primary-d);
         }
 
-        .info-label {
-            font-weight: bold;
-            color: #555;
+        .card-link {
+            font-size: 13px;
+            color: var(--primary);
+            text-decoration: none;
         }
 
-        .info-value {
-            color: #333;
-            margin-left: 10px;
+        .card-body {
+            padding: 18px 22px;
+        }
+
+        .session-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .session-item {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 12px 16px;
+            border-radius: 10px;
+            border: 1px solid #e9ecef;
+        }
+
+        .session-item.is-break {
+            background: #f8f9fa;
+            opacity: .85;
+        }
+
+        .session-item.completed {
+            background: #f0fff4;
+            border-color: #b7e4c7;
+        }
+
+        .session-time {
+            font-size: 12px;
+            color: var(--muted);
+            width: 100px;
+            flex-shrink: 0;
+        }
+
+        .session-info {
+            flex: 1;
+        }
+
+        .session-subject {
+            font-size: 11px;
+            color: var(--primary);
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .session-topic {
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .session-dur {
+            font-size: 12px;
+            color: var(--muted);
+        }
+
+        .btn-complete {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .btn-complete:hover {
+            background: var(--primary-d);
+        }
+
+        .done-tag {
+            font-size: 12px;
+            color: var(--success);
+            font-weight: 600;
+        }
+
+        .exam-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .exam-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 14px;
+            border-radius: 10px;
+            border: 1px solid #e9ecef;
+        }
+
+        .exam-name {
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .exam-date {
+            font-size: 12px;
+            color: var(--muted);
+        }
+
+        .exam-days {
+            font-size: 13px;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 20px;
+        }
+
+        .urgent {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .safe {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .badges-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .badge-chip {
+            background: var(--primary-l);
+            color: var(--primary-d);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .empty-msg {
+            color: var(--muted);
+            font-size: 14px;
+            text-align: center;
+            padding: 24px 0;
+        }
+
+        .empty-msg a {
+            color: var(--primary);
+        }
+
+        .right-col {
+            display: flex;
+            flex-direction: column;
+            gap: 22px;
         }
     </style>
 </head>
 
 <body>
-    <div class="navbar">
-        <div class="navbar-brand">Personal Assistant</div>
-        <div class="navbar-user">
-            <span>Welcome, {{ user.name }}</span>
-            <a href="/logout/" class="logout-btn">Logout</a>
+    <aside class="sidebar">
+        <div class="sidebar-brand"><span></span> Study Planner</div>
+        <div class="nav-section">Main</div>
+        <a href="/" class="nav-item active"><span class="icon"></span> Dashboard</a>
+        <a href="/schedule/" class="nav-item"><span class="icon"></span> Schedule</a>
+        <div class="nav-section">Study</div>
+        <a href="/subjects/" class="nav-item"><span class="icon"></span> Subjects</a>
+        <div class="nav-section">Account</div>
+        <a href="/profile/" class="nav-item"><span class="icon"></span> Profile</a>
+        <div class="sidebar-footer">
+            <div class="user-name">{{ user.name }}</div>
+            <div>{{ user.email }}</div>
         </div>
-    </div>
-
-    <div class="content">
-        <div class="card">
-            <h2>Your Profile</h2>
-            <div class="info-group">
-                <span class="info-label">Name:</span>
-                <span class="info-value">{{ user.name }}</span>
+    </aside>
+    <div class="main">
+        <div class="topbar">
+            <h1>Dashboard</h1>
+            <div class="topbar-right">
+                <span>📆 {{ today }}</span>
+                <a href="/logout/" class="btn-logout">Logout</a>
             </div>
-            <div class="info-group">
-                <span class="info-label">Email:</span>
-                <span class="info-value">{{ user.email }}</span>
+        </div>
+        <div class="content">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Points</div>
+                    <div class="stat-val">{{ user.points|default:"0" }}</div>
+                    <div class="stat-sub">Total earned</div>
+                </div>
+                <div class="stat-card orange">
+                    <div class="stat-label">Study Streak</div>
+                    <div class="stat-val">{{ streak }} 🔥</div>
+                    <div class="stat-sub">Consecutive days</div>
+                </div>
+                <div class="stat-card green">
+                    <div class="stat-label">Today's Progress</div>
+                    <div class="stat-val">{{ today_completed }}/{{ today_total }}</div>
+                    <div class="stat-sub">Tasks completed today</div>
+                    {% if today_total > 0 %}
+                    <div class="progress-wrap">
+                        <div class="progress-bar" style="width:{% widthratio today_completed today_total 100 %}%"></div>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Subjects</div>
+                    <div class="stat-val">{{ subject_count }}</div>
+                    <div class="stat-sub">{{ pending_topics }} topics pending</div>
+                </div>
             </div>
-            <div class="info-group">
-                <span class="info-label">Phone:</span>
-                <span class="info-value">{{ user.phone }}</span>
+            <div class="two-col">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>📅 Today's Schedule</h2>
+                        <a href="/schedule/" class="card-link">View full →</a>
+                    </div>
+                    <div class="card-body">
+                        {% for task in today_tasks %}
+                        <div
+                            class="session-item {% if task.is_break %}is-break{% endif %} {% if task.completed %}completed{% endif %}">
+                            <div class="session-time">{{ task.start_time }} - {{ task.end_time }}</div>
+                            <div class="session-info">
+                                {% if task.is_break %}
+                                <div class="session-topic">☕ Break</div>
+                                <div class="session-dur">{{ task.duration_minutes }} min</div>
+                                {% else %}
+                                <div class="session-subject">{{ task.subject_name }}</div>
+                                <div class="session-topic">{{ task.topic_name }}</div>
+                                <div class="session-dur">{{ task.duration_minutes }} min</div>
+                                {% endif %}
+                            </div>
+                            {% if not task.is_break %}
+                            {% if task.completed %}
+                            <span class="done-tag">✓ Done</span>
+                            {% else %}
+                            <form method="POST" action="/complete-task/" style="display:inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="task_id" value="{{ task.id }}">
+                                <input type="hidden" name="redirect_to" value="home">
+                                <button type="submit" class="btn-complete">Mark Done</button>
+                            </form>
+                            {% endif %}
+                            {% endif %}
+                        </div>
+                        {% empty %}
+                        <div class="empty-msg">No sessions today.<br><a href="/schedule/">Generate a schedule →</a>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="right-col">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2>📝 Upcoming Exams</h2>
+                            <a href="/subjects/" class="card-link">Manage →</a>
+                        </div>
+                        <div class="card-body">
+                            {% if upcoming_exams %}
+                            <div class="exam-list">
+                                {% for exam in upcoming_exams %}
+                                <div class="exam-item">
+                                    <div>
+                                        <div class="exam-name">{{ exam.name }}</div>
+                                        <div class="exam-date">{{ exam.exam_date }}</div>
+                                    </div>
+                                    <div
+                                        class="exam-days {% if exam.days_until_exam is not None %}{% if exam.days_until_exam <= 3 %}urgent{% elif exam.days_until_exam <= 7 %}warning{% else %}safe{% endif %}{% endif %}">
+                                        {% if exam.days_until_exam == 0 %}Today!{% elif exam.days_until_exam == 1
+                                        %}Tomorrow{% else %}{{ exam.days_until_exam }}d{% endif %}
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            <div class="empty-msg">No upcoming exams.<br><a href="/subjects/">Add subjects →</a></div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">
+                            <h2>🏅 Badges</h2>
+                        </div>
+                        <div class="card-body">
+                            {% if user.badges %}
+                            <div class="badges-row">{% for badge in user.badges %}<span class="badge-chip">{{badge}}</span>{% endfor %}</div>
+                            {% else %}
+                            <div class="empty-msg">Complete tasks to earn badges!</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Topics - {{ subject.name }}</title>
+    <style>
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            --primary: #007BFF;
+            --primary-d: #0056b3;
+            --primary-l: #e6f0ff;
+            --bg: #f0f4f8;
+            --white: #fff;
+            --text: #333;
+            --muted: #6c757d;
+            --success: #28a745;
+            --danger: #dc3545;
+            --sidebar-w: 240px;
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: var(--sidebar-w);
+            background: linear-gradient(180deg, #0056b3, #003d82);
+            color: white;
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            z-index: 100;
+        }
+
+        .sidebar-brand {
+            padding: 24px 20px 20px;
+            font-size: 18px;
+            font-weight: 700;
+            border-bottom: 1px solid rgba(255, 255, 255, .15);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .nav-section {
+            padding: 16px 12px 8px;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: rgba(255, 255, 255, .5);
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 11px 20px;
+            text-decoration: none;
+            color: rgba(255, 255, 255, .85);
+            font-size: 14px;
+            border-radius: 8px;
+            margin: 2px 8px;
+            transition: background .2s;
+        }
+
+        .nav-item:hover,
+        .nav-item.active {
+            background: rgba(255, 255, 255, .15);
+            color: white;
+        }
+
+        .nav-item .icon {
+            font-size: 17px;
+            width: 22px;
+            text-align: center;
+        }
+
+        .sidebar-footer {
+            margin-top: auto;
+            padding: 16px 20px;
+            border-top: 1px solid rgba(255, 255, 255, .15);
+            font-size: 13px;
+            color: rgba(255, 255, 255, .7);
+        }
+
+        .sidebar-footer .user-name {
+            font-weight: 600;
+            color: white;
+        }
+
+        .main {
+            margin-left: var(--sidebar-w);
+            flex: 1;
+        }
+
+        .topbar {
+            background: var(--white);
+            border-bottom: 1px solid #dee2e6;
+            padding: 14px 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+        }
+
+        .topbar h1 {
+            font-size: 20px;
+            color: var(--primary-d);
+            font-weight: 700;
+        }
+
+        .breadcrumb {
+            font-size: 13px;
+            color: var(--muted);
+        }
+
+        .breadcrumb a {
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        .btn-logout {
+            background: var(--primary-l);
+            color: var(--primary-d);
+            border: none;
+            padding: 7px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 13px;
+            text-decoration: none;
+        }
+
+        .content {
+            padding: 28px 32px;
+        }
+
+        .subject-banner {
+            color: white;
+            border-radius: 12px;
+            padding: 20px 24px;
+            margin-bottom: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .banner-name {
+            font-size: 22px;
+            font-weight: 700;
+        }
+
+        .banner-meta {
+            font-size: 14px;
+            opacity: .9;
+            margin-top: 4px;
+        }
+
+        .banner-stats {
+            display: flex;
+            gap: 24px;
+        }
+
+        .bs-item {
+            text-align: center;
+        }
+
+        .bs-val {
+            font-size: 24px;
+            font-weight: 700;
+        }
+
+        .bs-lbl {
+            font-size: 12px;
+            opacity: .8;
+        }
+
+        .card {
+            background: var(--white);
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, .07);
+            margin-bottom: 24px;
+        }
+
+        .card-header {
+            padding: 18px 22px 14px;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-header h2 {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--primary-d);
+        }
+
+        .card-body {
+            padding: 20px 22px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr 50px;
+            gap: 12px;
+            align-items: end;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .form-group label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: .5px;
+        }
+
+        .form-group input,
+        .form-group select {
+            padding: 9px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .btn-add {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 6px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            height: 30px;
+        }
+
+        .btn-add:hover {
+            background: var(--primary-d);
+        }
+
+        .topics-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .topics-table th {
+            padding: 10px 14px;
+            text-align: left;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: .6px;
+            color: var(--muted);
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .topics-table td {
+            padding: 14px;
+            border-bottom: 1px solid #f5f5f5;
+            font-size: 14px;
+            vertical-align: middle;
+        }
+
+        .topics-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .topics-table tr:hover td {
+            background: #fafcff;
+        }
+
+        .stars {
+            font-size: 13px;
+            letter-spacing: 1px;
+        }
+
+        .priority-bar-wrap {
+            width: 80px;
+            background: #e9ecef;
+            border-radius: 10px;
+            height: 6px;
+            overflow: hidden;
+            display: inline-block;
+            vertical-align: middle;
+        }
+
+        .priority-bar {
+            height: 100%;
+            border-radius: 10px;
+        }
+
+        .p-high {
+            background: #dc3545;
+        }
+
+        .p-med {
+            background: #ffc107;
+        }
+
+        .p-low {
+            background: #28a745;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-completed {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .btn-toggle {
+            padding: 5px 12px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .mark-done {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .mark-done:hover {
+            background: #c3e6cb;
+        }
+
+        .mark-undone {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .mark-undone:hover {
+            background: #ffeeba;
+        }
+
+        .btn-edit {
+            background: #fff8e6;
+            color: #856404;
+            border: 1px solid #ffd966;
+            padding: 5px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .btn-edit:hover {
+            background: #ffeeba;
+        }
+
+        .btn-delete {
+            background: #fff5f5;
+            color: var(--danger);
+            border: 1px solid #ffd0d0;
+            padding: 5px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .row-completed td {
+            opacity: .65;
+        }
+
+        .row-completed .topic-name {
+            text-decoration: line-through;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 48px;
+            color: var(--muted);
+        }
+
+        .sort-info {
+            font-size: 12px;
+            color: var(--muted);
+        }
+
+        .action-cell {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, .5);
+            z-index: 500;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-overlay.open {
+            display: flex;
+        }
+
+        .modal {
+            background: var(--white);
+            border-radius: 14px;
+            padding: 28px;
+            width: 500px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, .2);
+        }
+
+        .modal h3 {
+            font-size: 17px;
+            font-weight: 700;
+            color: var(--primary-d);
+            margin-bottom: 20px;
+        }
+
+        .modal-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+            margin-bottom: 20px;
+        }
+
+        .modal-grid .full {
+            grid-column: 1 / -1;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .btn-save {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 9px 22px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .btn-save:hover {
+            background: var(--primary-d);
+        }
+
+        .btn-cancel {
+            background: #f0f0f0;
+            color: var(--text);
+            border: none;
+            padding: 9px 22px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+        }
+    </style>
+</head>
+
+<body>
+    <aside class="sidebar">
+        <div class="sidebar-brand"><span>&#128218;</span> Study Planner</div>
+        <div class="nav-section">Main</div>
+        <a href="/" class="nav-item"><span class="icon">&#127968;</span> Dashboard</a>
+        <a href="/schedule/" class="nav-item"><span class="icon">&#128197;</span> Schedule</a>
+        <div class="nav-section">Study</div>
+        <a href="/subjects/" class="nav-item active"><span class="icon">&#128214;</span> Subjects</a>
+        <div class="nav-section">Account</div>
+        <a href="/profile/" class="nav-item"><span class="icon">&#128100;</span> Profile</a>
+        <div class="sidebar-footer">
+            <div class="user-name">{{ user.name }}</div>
+            <div>{{ user.email }}</div>
+        </div>
+    </aside>
+    <div class="main">
+        <div class="topbar">
+            <div>
+                <h1>{{ subject.name }}</h1>
+                <div class="breadcrumb"><a href="/subjects/">Subjects</a> &rarr; Topics</div>
+            </div>
+            <a href="/logout/" class="btn-logout">Logout</a>
+        </div>
+        <div class="content">
+            <div class="subject-banner" style="background:linear-gradient(135deg,{{ subject.color }},#003d82)">
+                <div>
+                    <div class="banner-name">{{ subject.name }}</div>
+                    <div class="banner-meta">Exam: {{ subject.exam_date }} | Importance: {{ subject.weightage }}/10
+                    </div>
+                </div>
+                <div class="banner-stats">
+                    <div class="bs-item">
+                        <div class="bs-val">{{ total_topics }}</div>
+                        <div class="bs-lbl">Topics</div>
+                    </div>
+                    <div class="bs-item">
+                        <div class="bs-val">{{ completed_topics }}</div>
+                        <div class="bs-lbl">Done</div>
+                    </div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-header">
+                    <h2>Add Topic</h2>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="add">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Topic Name</label>
+                                <input type="text" name="name" placeholder="e.g. Integration by Parts" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Difficulty (1-5)</label>
+                                <select name="difficulty">
+                                    <option value="1">1 - Very Easy</option>
+                                    <option value="2">2 - Easy</option>
+                                    <option value="3" selected>3 - Medium</option>
+                                    <option value="4">4 - Hard</option>
+                                    <option value="5">5 - Very Hard</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>My Strength (1-5)</label>
+                                <select name="strength">
+                                    <option value="1">1 - Very Weak</option>
+                                    <option value="2">2 - Weak</option>
+                                    <option value="3" selected>3 - Average</option>
+                                    <option value="4">4 - Strong</option>
+                                    <option value="5">5 - Very Strong</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Est. Hours</label>
+                                <input type="number" name="estimated_hours" placeholder="1.0" step="0.5" min="0.5"
+                                    value="1">
+                            </div>
+                            <button type="submit" class="btn-add">Add</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-header">
+                    <h2>Topics</h2>
+                    <span class="sort-info">Sorted by priority (highest first)</span>
+                </div>
+                <div class="card-body">
+                    {% if topics %}
+                    <table class="topics-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Topic</th>
+                                <th>Difficulty</th>
+                                <th>Strength</th>
+                                <th>Est. Time</th>
+                                <th>Priority</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for topic in topics %}
+                            <tr class="{% if topic.status == 'completed' %}row-completed{% endif %}">
+                                <td style="color:var(--muted);font-size:13px;">{{ forloop.counter }}</td>
+                                <td class="topic-name" style="font-weight:600;">{{ topic.name }}</td>
+                                <td><span class="stars" data-val="{{ topic.difficulty }}" data-max="5"
+                                        data-filled="&#11088;" data-empty="&#9734;"></span></td>
+                                <td><span class="stars" data-val="{{ topic.self_strength }}" data-max="5"
+                                        data-filled="&#128170;" data-empty="&#9711;"></span></td>
+                                <td>{{ topic.estimated_hours }}h</td>
+                                <td>
+                                    <div class="priority-bar-wrap">
+                                        <div class="priority-bar {% if topic.priority_score >= 100 %}p-high{% elif topic.priority_score >= 60 %}p-med{% else %}p-low{% endif %}"
+                                            style="width:{% widthratio topic.priority_score 200 100 %}%"></div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span
+                                        class="status-badge {% if topic.status == 'completed' %}status-completed{% else %}status-pending{% endif %}">
+                                        {% if topic.status == 'completed' %}Done{% else %}Pending{% endif %}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="action-cell">
+                                        <form method="POST">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="action" value="toggle_status">
+                                            <input type="hidden" name="topic_id" value="{{ topic.id }}">
+                                            <button type="submit"
+                                                class="btn-toggle {% if topic.status == 'completed' %}mark-undone{% else %}mark-done{% endif %}">
+                                                {% if topic.status == 'completed' %}Undo{% else %}Done{% endif %}
+                                            </button>
+                                        </form>
+                                        <button type="button" class="btn-edit"
+                                            onclick="openEdit('{{ topic.id }}','{{ topic.name }}','{{ topic.difficulty }}','{{ topic.self_strength }}','{{ topic.estimated_hours }}')">
+                                            Edit
+                                        </button>
+                                        <form method="POST" onsubmit="return confirm('Delete this topic?')">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="action" value="delete">
+                                            <input type="hidden" name="topic_id" value="{{ topic.id }}">
+                                            <button type="submit" class="btn-delete">Delete</button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <div class="empty-state">
+                        <p>No topics yet. Add your first topic above!</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="editModal">
+        <div class="modal">
+            <h3>Edit Topic</h3>
+            <form method="POST" id="editForm">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="edit">
+                <input type="hidden" name="topic_id" id="edit_topic_id">
+                <div class="modal-grid">
+                    <div class="form-group full">
+                        <label>Topic Name</label>
+                        <input type="text" name="name" id="edit_name" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Difficulty (1-5)</label>
+                        <select name="difficulty" id="edit_difficulty">
+                            <option value="1">1 - Very Easy</option>
+                            <option value="2">2 - Easy</option>
+                            <option value="3">3 - Medium</option>
+                            <option value="4">4 - Hard</option>
+                            <option value="5">5 - Very Hard</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>My Strength (1-5)</label>
+                        <select name="strength" id="edit_strength">
+                            <option value="1">1 - Very Weak</option>
+                            <option value="2">2 - Weak</option>
+                            <option value="3">3 - Average</option>
+                            <option value="4">4 - Strong</option>
+                            <option value="5">5 - Very Strong</option>
+                        </select>
+                    </div>
+                    <div class="form-group full">
+                        <label>Estimated Hours</label>
+                        <input type="number" name="estimated_hours" id="edit_hours" step="0.5" min="0.5">
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-cancel" onclick="closeEdit()">Cancel</button>
+                    <button type="submit" class="btn-save">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        document.querySelectorAll('.stars').forEach(function (el) {
+            var val = parseInt(el.dataset.val) || 0;
+            var max = parseInt(el.dataset.max) || 5;
+            var out = '';
+            for (var i = 1; i <= max; i++) {
+                out += i <= val ? el.dataset.filled : el.dataset.empty;
+            }
+            el.textContent = out;
+        });
+
+        function openEdit(id, name, difficulty, strength, hours) {
+            document.getElementById('edit_topic_id').value = id;
+            document.getElementById('edit_name').value = name;
+            document.getElementById('edit_difficulty').value = difficulty;
+            document.getElementById('edit_strength').value = strength;
+            document.getElementById('edit_hours').value = hours;
+            document.getElementById('editModal').classList.add('open');
+        }
+        function closeEdit() {
+            document.getElementById('editModal').classList.remove('open');
+        }
+        document.getElementById('editModal').addEventListener('click', function (e) {
+            if (e.target === this) closeEdit();
+        });
+    </script>
+</body>
+
+</html>
