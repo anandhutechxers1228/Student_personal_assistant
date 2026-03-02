@@ -255,6 +255,22 @@
             font-weight: 600;
             font-size: 14px;
         }
+
+        @media (max-width: 768px) {
+            .content {
+                padding: 16px;
+            }
+            .stats-row {
+                grid-template-columns: 1fr 1fr;
+            }
+            .two-col {
+                grid-template-columns: 1fr;
+            }
+            .modal {
+                width: 90%;
+                padding: 20px;
+            }
+        }
 {% endblock %}
 
 {% block content %}
@@ -318,7 +334,7 @@
                             <button type="submit" class="btn-save">Save Changes</button>
                         </form>
                         <br>
-                        <button type="button" class="btn-change-pw" onclick="document.getElementById('pwModal').classList.add('open')">🔒 Change Password</button>
+                        <button type="button" class="btn-change-pw" onclick="document.getElementById('pwModal').classList.add('open')">Change Password</button>
                     </div>
                 </div>
                 <div class="right-stack">

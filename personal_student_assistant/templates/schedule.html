@@ -17,12 +17,20 @@
         .card-header {
             padding: 18px 22px 14px;
             border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .collapsible-header {
+            cursor: pointer;
         }
 
         .card-header h2 {
             font-size: 15px;
             font-weight: 700;
             color: var(--primary-d);
+            margin: 0;
         }
 
         .card-body {
@@ -215,6 +223,54 @@
             border: 1px dashed #dee2e6;
             border-radius: 9px;
         }
+        
+        .btn-expand-icon {
+            display: none;
+            font-size: 16px;
+            color: var(--muted);
+        }
+
+        @media (max-width: 1024px) {
+            .settings-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .content {
+                padding: 16px;
+            }
+            .week-grid {
+                grid-template-columns: 1fr;
+            }
+            .action-bar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .action-bar form, .action-bar button {
+                width: 100%;
+            }
+            
+            .collapsible-body {
+                display: none;
+            }
+            .collapsible-body.open {
+                display: block;
+            }
+            .btn-expand-icon {
+                display: inline-block;
+                transition: transform 0.3s ease;
+            }
+            .btn-expand-icon.open {
+                transform: rotate(180deg);
+            }
+        }
+
+        @media (max-width: 480px) {
+            .settings-grid {
+                grid-template-columns: 1fr;
+            }
+        }
 {% endblock %}
 
 {% block content %}
@@ -224,10 +280,11 @@
         </div>
         <div class="content">
             <div class="card">
-                <div class="card-header">
+                <div class="card-header collapsible-header" onclick="toggleCard('settings-body', 'settings-icon')">
                     <h2>Study Window Settings</h2>
+                    <span class="btn-expand-icon" id="settings-icon">▼</span>
                 </div>
-                <div class="card-body">
+                <div class="card-body collapsible-body" id="settings-body">
                     <form method="POST">
                         {% csrf_token %}
                         <input type="hidden" name="action" value="update_study_hours">
@@ -345,5 +402,21 @@
 
         updateDoneButtons();
         setInterval(updateDoneButtons, 60000);
+        
+        function toggleCard(bodyId, iconId) {
+            if (window.innerWidth <= 768) {
+                var body = document.getElementById(bodyId);
+                var icon = document.getElementById(iconId);
+                body.classList.toggle('open');
+                icon.classList.toggle('open');
+            }
+        }
+        
+        window.addEventListener('resize', function() {
+            if (window.innerWidth > 768) {
+                document.getElementById('settings-body').classList.remove('open');
+                document.getElementById('settings-icon').classList.remove('open');
+            }
+        });
     </script>
 {% endblock %}

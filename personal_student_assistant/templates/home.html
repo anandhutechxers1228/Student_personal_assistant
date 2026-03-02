@@ -89,11 +89,16 @@
             justify-content: space-between;
             align-items: center;
         }
+        
+        .collapsible-header {
+            cursor: pointer;
+        }
 
         .card-header h2 {
             font-size: 15px;
             font-weight: 700;
             color: var(--primary-d);
+            margin: 0;
         }
 
         .card-link {
@@ -170,8 +175,14 @@
             font-weight: 600;
         }
 
-        .btn-complete:hover {
+        .btn-complete:hover:not(:disabled) {
             background: var(--primary-d);
+        }
+
+        .btn-complete:disabled {
+            background: #adb5bd;
+            cursor: not-allowed;
+            opacity: 0.6;
         }
 
         .done-tag {
@@ -258,6 +269,63 @@
             flex-direction: column;
             gap: 22px;
         }
+
+        .btn-expand-icon {
+            display: none;
+            font-size: 16px;
+            color: var(--muted);
+        }
+
+        @media (max-width: 1024px) {
+            .two-col {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .content {
+                padding: 16px;
+            }
+            .stats-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+            .topbar-right span {
+                display: none;
+            }
+            
+            /* Collapsible logic for mobile dashboard */
+            .collapsible-body {
+                display: none;
+            }
+            .collapsible-body.open {
+                display: block;
+            }
+            .btn-expand-icon {
+                display: inline-block;
+                transition: transform 0.3s ease;
+            }
+            .btn-expand-icon.open {
+                transform: rotate(180deg);
+            }
+            /* Hide the "View full" / "Manage" links on mobile header to make room for icon */
+            .card-header .card-link {
+                display: none;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            .session-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+            }
+            .session-time {
+                width: auto;
+            }
+        }
 {% endblock %}
 
 {% block content %}
@@ -298,11 +366,12 @@
             </div>
             <div class="two-col">
                 <div class="card">
-                    <div class="card-header">
+                    <div class="card-header collapsible-header" onclick="toggleCard('schedule-body', 'schedule-icon')">
                         <h2>Today's Schedule</h2>
                         <a href="/schedule/" class="card-link">View full →</a>
+                        <span class="btn-expand-icon" id="schedule-icon">▼</span>
                     </div>
-                    <div class="card-body">
+                    <div class="card-body collapsible-body" id="schedule-body">
                         {% for task in today_tasks %}
                         <div class="session-item {% if task.is_break %}is-break{% endif %} {% if task.completed %}completed{% endif %}">
                             <div class="session-time">{{ task.start_time }} - {{ task.end_time }}</div>
@@ -324,7 +393,7 @@
                                 {% csrf_token %}
                                 <input type="hidden" name="task_id" value="{{ task.id }}">
                                 <input type="hidden" name="redirect_to" value="home">
-                                <button type="submit" class="btn-complete">Mark Done</button>
+                                <button type="submit" class="btn-complete" data-end="{{ today }}T{{ task.end_time }}">Mark Done</button>
                             </form>
                             {% endif %}
                             {% endif %}
@@ -336,11 +405,12 @@
                 </div>
                 <div class="right-col">
                     <div class="card">
-                        <div class="card-header">
+                        <div class="card-header collapsible-header" onclick="toggleCard('exams-body', 'exams-icon')">
                             <h2>Upcoming Exams</h2>
                             <a href="/subjects/" class="card-link">Manage →</a>
+                            <span class="btn-expand-icon" id="exams-icon">▼</span>
                         </div>
-                        <div class="card-body">
+                        <div class="card-body collapsible-body" id="exams-body">
                             {% if upcoming_exams %}
                             <div class="exam-list">
                                 {% for exam in upcoming_exams %}
@@ -361,10 +431,11 @@
                         </div>
                     </div>
                     <div class="card">
-                        <div class="card-header">
+                        <div class="card-header collapsible-header" onclick="toggleCard('badges-body', 'badges-icon')">
                             <h2>🏅 Badges</h2>
+                            <span class="btn-expand-icon" id="badges-icon">▼</span>
                         </div>
-                        <div class="card-body">
+                        <div class="card-body collapsible-body" id="badges-body">
                             {% if user.badges %}
                             <div class="badges-row">{% for badge in user.badges %}<span class="badge-chip">{{ badge }}</span>{% endfor %}</div>
                             {% else %}
@@ -375,4 +446,41 @@
                 </div>
             </div>
         </div>
+
+    <script>
+        function updateDoneButtons() {
+            var now = new Date();
+            document.querySelectorAll('.btn-complete[data-end]').forEach(function(btn) {
+                var endDate = new Date(btn.getAttribute('data-end'));
+                if (now < endDate) {
+                    btn.disabled = true;
+                    btn.title = 'Available after ' + endDate.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+                } else {
+                    btn.disabled = false;
+                    btn.title = '';
+                }
+            });
+        }
+
+        updateDoneButtons();
+        setInterval(updateDoneButtons, 60000);
+
+        function toggleCard(bodyId, iconId) {
+            if (window.innerWidth <= 768) {
+                var body = document.getElementById(bodyId);
+                var icon = document.getElementById(iconId);
+                body.classList.toggle('open');
+                icon.classList.toggle('open');
+            }
+        }
+        
+        window.addEventListener('resize', function() {
+            if (window.innerWidth > 768) {
+                document.getElementById('schedule-icon').classList.remove('open');
+                document.getElementById('exams-icon').classList.remove('open');
+                document.getElementById('badges-icon').classList.remove('open');
+            }
+        });
+        
+    </script>
 {% endblock %}

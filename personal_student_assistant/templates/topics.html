@@ -5,11 +5,32 @@
 {% block extra_css %}
         .content {
             padding: 28px 32px;
+            width: 100%;
+            max-width: 100vw;
+            box-sizing: border-box;
+            overflow-x: hidden;
+        }
+
+        /* Topbar Text Truncation Fix */
+        .topbar-text {
+            min-width: 0;
+            flex: 1;
+            padding-right: 15px;
+        }
+
+        .topbar-text h1 {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin: 0;
         }
 
         .breadcrumb {
             font-size: 13px;
             color: var(--muted);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .breadcrumb a {
@@ -25,11 +46,22 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        /* Banner Text Truncation Fix */
+        .banner-text-wrap {
+            min-width: 0;
+            flex: 1;
         }
 
         .banner-name {
             font-size: 22px;
             font-weight: 700;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .banner-meta {
@@ -41,6 +73,7 @@
         .banner-stats {
             display: flex;
             gap: 24px;
+            flex-wrap: wrap;
         }
 
         .bs-item {
@@ -62,6 +95,10 @@
             border-radius: 12px;
             box-shadow: 0 2px 8px rgba(0, 0, 0, .07);
             margin-bottom: 24px;
+            width: 100%;
+            max-width: 100%;
+            overflow: hidden;
+            box-sizing: border-box;
         }
 
         .card-header {
@@ -70,6 +107,9 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            cursor: pointer;
         }
 
         .card-header h2 {
@@ -80,6 +120,8 @@
 
         .card-body {
             padding: 20px 22px;
+            width: 100%;
+            box-sizing: border-box;
         }
 
         .form-grid {
@@ -87,6 +129,7 @@
             grid-template-columns: 2fr 1fr 1fr 1fr 50px;
             gap: 12px;
             align-items: end;
+            width: 100%;
         }
 
         .form-group {
@@ -109,6 +152,8 @@
             border: 1px solid #ced4da;
             border-radius: 8px;
             font-size: 14px;
+            width: 100%;
+            box-sizing: border-box;
         }
 
         .form-group input:focus,
@@ -126,11 +171,18 @@
             cursor: pointer;
             font-size: 12px;
             font-weight: 600;
-            height: 30px;
+            height: 40px;
+            width: 100%;
         }
 
         .btn-add:hover {
             background: var(--primary-d);
+        }
+
+        /* Desktop Table View */
+        .table-container {
+            width: 100%;
+            display: block;
         }
 
         .topics-table {
@@ -146,6 +198,7 @@
             letter-spacing: .6px;
             color: var(--muted);
             border-bottom: 2px solid #f0f0f0;
+            white-space: nowrap;
         }
 
         .topics-table td {
@@ -163,9 +216,54 @@
             background: #fafcff;
         }
 
+        /* Mobile Card View (Hidden by default) */
+        .mobile-topics-container {
+            display: none;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .mobile-topic-card {
+            background: var(--white);
+            border: 1px solid #f0f0f0;
+            border-radius: 10px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .mobile-topic-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .mobile-topic-title {
+            font-weight: 700;
+            font-size: 16px;
+            color: var(--text);
+            margin-bottom: 4px;
+        }
+        
+        .mobile-topic-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            font-size: 13px;
+        }
+
+        .mobile-meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--muted);
+        }
+
         .stars {
             font-size: 13px;
             letter-spacing: 1px;
+            white-space: nowrap;
         }
 
         .priority-bar-wrap {
@@ -201,6 +299,7 @@
             border-radius: 20px;
             font-size: 12px;
             font-weight: 600;
+            white-space: nowrap;
         }
 
         .status-pending {
@@ -220,6 +319,7 @@
             cursor: pointer;
             font-size: 12px;
             font-weight: 600;
+            white-space: nowrap;
         }
 
         .mark-done {
@@ -265,11 +365,11 @@
             font-size: 12px;
         }
 
-        .row-completed td {
+        .row-completed td, .mobile-topic-card.completed {
             opacity: .65;
         }
 
-        .row-completed .topic-name {
+        .row-completed .topic-name, .mobile-topic-card.completed .mobile-topic-title {
             text-decoration: line-through;
         }
 
@@ -296,8 +396,11 @@
             inset: 0;
             background: rgba(0, 0, 0, .5);
             z-index: 500;
-            align-items: center;
+            align-items: flex-start;
             justify-content: center;
+            padding: 20px;
+            overflow-y: auto;
+            box-sizing: border-box;
         }
 
         .modal-overlay.open {
@@ -308,8 +411,11 @@
             background: var(--white);
             border-radius: 14px;
             padding: 28px;
-            width: 500px;
+            width: 100%;
+            max-width: 500px;
             box-shadow: 0 8px 32px rgba(0, 0, 0, .2);
+            margin: auto;
+            box-sizing: border-box;
         }
 
         .modal h3 {
@@ -334,6 +440,7 @@
             display: flex;
             gap: 10px;
             justify-content: flex-end;
+            flex-wrap: wrap;
         }
 
         .btn-save {
@@ -361,20 +468,85 @@
             font-weight: 600;
             font-size: 14px;
         }
+
+        .btn-expand-icon {
+            display: none;
+            font-size: 16px;
+            color: var(--muted);
+        }
+
+        @media (max-width: 1024px) {
+            .form-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+            .form-grid .btn-add {
+                grid-column: 1 / -1;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .content {
+                padding: 16px;
+            }
+            .subject-banner {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            /* Add Topic Collapse/Expand styling */
+            .collapsible-body {
+                display: none;
+            }
+            .collapsible-body.open {
+                display: block;
+            }
+            .btn-expand-icon {
+                display: inline-block;
+                transition: transform 0.3s ease;
+            }
+            .btn-expand-icon.open {
+                transform: rotate(180deg);
+            }
+
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+            .form-grid .btn-add {
+                grid-column: auto;
+            }
+
+            /* Switch to Card View for Topics */
+            .table-container {
+                display: none;
+            }
+            .mobile-topics-container {
+                display: flex;
+            }
+
+            .modal-grid {
+                grid-template-columns: 1fr;
+            }
+            .modal-grid .full {
+                grid-column: auto;
+            }
+            .modal {
+                padding: 20px;
+            }
+        }
 {% endblock %}
 
 {% block content %}
         <div class="topbar">
-            <div>
-                <h1>{{ subject.name }}</h1>
+            <div class="topbar-text">
+                <h1 title="{{ subject.name }}">{{ subject.name }}</h1>
                 <div class="breadcrumb"><a href="/subjects/">Subjects</a> &rarr; Topics</div>
             </div>
             <a href="/logout/" class="btn-logout">Logout</a>
         </div>
         <div class="content">
             <div class="subject-banner" style="background:linear-gradient(135deg,{{ subject.color }},#003d82)">
-                <div>
-                    <div class="banner-name">{{ subject.name }}</div>
+                <div class="banner-text-wrap">
+                    <div class="banner-name" title="{{ subject.name }}">{{ subject.name }}</div>
                     <div class="banner-meta">Exam: {{ subject.exam_date }} | Importance: {{ subject.weightage }}/10</div>
                 </div>
                 <div class="banner-stats">
@@ -388,11 +560,13 @@
                     </div>
                 </div>
             </div>
+            
             <div class="card">
-                <div class="card-header">
+                <div class="card-header" onclick="toggleCard('add-topic-body', 'add-topic-icon')">
                     <h2>Add Topic</h2>
+                    <span class="btn-expand-icon" id="add-topic-icon">▼</span>
                 </div>
-                <div class="card-body">
+                <div class="card-body collapsible-body" id="add-topic-body">
                     <form method="POST">
                         {% csrf_token %}
                         <input type="hidden" name="action" value="add">
@@ -430,6 +604,7 @@
                     </form>
                 </div>
             </div>
+
             <div class="card">
                 <div class="card-header">
                     <h2>Topics</h2>
@@ -437,58 +612,109 @@
                 </div>
                 <div class="card-body">
                     {% if topics %}
-                    <table class="topics-table">
-                        <thead>
-                            <tr>
-                                <th>#</th>
-                                <th>Topic</th>
-                                <th>Difficulty</th>
-                                <th>Strength</th>
-                                <th>Est. Time</th>
-                                <th>Priority</th>
-                                <th>Status</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for topic in topics %}
-                            <tr class="{% if topic.status == 'completed' %}row-completed{% endif %}">
-                                <td style="color:var(--muted);font-size:13px;">{{ forloop.counter }}</td>
-                                <td class="topic-name" style="font-weight:600;">{{ topic.name }}</td>
-                                <td><span class="stars" data-val="{{ topic.difficulty }}" data-max="5" data-filled="&#11088;" data-empty="&#9734;"></span></td>
-                                <td><span class="stars" data-val="{{ topic.self_strength }}" data-max="5" data-filled="&#128170;" data-empty="&#9711;"></span></td>
-                                <td>{{ topic.estimated_hours }}h</td>
-                                <td>
-                                    <div class="priority-bar-wrap">
+                    
+                    <div class="table-container">
+                        <table class="topics-table">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Topic</th>
+                                    <th>Difficulty</th>
+                                    <th>Strength</th>
+                                    <th>Est. Time</th>
+                                    <th>Priority</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for topic in topics %}
+                                <tr class="{% if topic.status == 'completed' %}row-completed{% endif %}">
+                                    <td style="color:var(--muted);font-size:13px;">{{ forloop.counter }}</td>
+                                    <td class="topic-name" style="font-weight:600;">{{ topic.name }}</td>
+                                    <td><span class="stars" data-val="{{ topic.difficulty }}" data-max="5" data-filled="&#11088;" data-empty="&#9734;"></span></td>
+                                    <td><span class="stars" data-val="{{ topic.self_strength }}" data-max="5" data-filled="&#128170;" data-empty="&#9711;"></span></td>
+                                    <td>{{ topic.estimated_hours }}h</td>
+                                    <td>
+                                        <div class="priority-bar-wrap">
+                                            <div class="priority-bar {% if topic.priority_score >= 100 %}p-high{% elif topic.priority_score >= 60 %}p-med{% else %}p-low{% endif %}" style="width:{% widthratio topic.priority_score 200 100 %}%"></div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="status-badge {% if topic.status == 'completed' %}status-completed{% else %}status-pending{% endif %}">
+                                            {% if topic.status == 'completed' %}Done{% else %}Pending{% endif %}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="action-cell">
+                                            <form method="POST">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="action" value="toggle_status">
+                                                <input type="hidden" name="topic_id" value="{{ topic.id }}">
+                                                <button type="submit" class="btn-toggle {% if topic.status == 'completed' %}mark-undone{% else %}mark-done{% endif %}">{% if topic.status == 'completed' %}Undo{% else %}Done{% endif %}</button>
+                                            </form>
+                                            <button type="button" class="btn-edit" onclick="openEdit('{{ topic.id }}','{{ topic.name }}','{{ topic.difficulty }}','{{ topic.self_strength }}','{{ topic.estimated_hours }}')">Edit</button>
+                                            <form method="POST" onsubmit="return confirm('Delete this topic?')">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="action" value="delete">
+                                                <input type="hidden" name="topic_id" value="{{ topic.id }}">
+                                                <button type="submit" class="btn-delete">Delete</button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="mobile-topics-container">
+                        {% for topic in topics %}
+                        <div class="mobile-topic-card {% if topic.status == 'completed' %}completed{% endif %}">
+                            <div class="mobile-topic-header">
+                                <div class="mobile-topic-title">{{ forloop.counter }}. {{ topic.name }}</div>
+                                <span class="status-badge {% if topic.status == 'completed' %}status-completed{% else %}status-pending{% endif %}">
+                                    {% if topic.status == 'completed' %}Done{% else %}Pending{% endif %}
+                                </span>
+                            </div>
+                            
+                            <div class="mobile-topic-meta">
+                                <div class="mobile-meta-item">
+                                    <strong>Diff:</strong> <span class="stars" data-val="{{ topic.difficulty }}" data-max="5" data-filled="&#11088;" data-empty="&#9734;"></span>
+                                </div>
+                                <div class="mobile-meta-item">
+                                    <strong>Str:</strong> <span class="stars" data-val="{{ topic.self_strength }}" data-max="5" data-filled="&#128170;" data-empty="&#9711;"></span>
+                                </div>
+                                <div class="mobile-meta-item">
+                                    <strong>Time:</strong> {{ topic.estimated_hours }}h
+                                </div>
+                                <div class="mobile-meta-item" style="width: 100%;">
+                                    <strong>Priority:</strong> 
+                                    <div class="priority-bar-wrap" style="margin-left: 8px;">
                                         <div class="priority-bar {% if topic.priority_score >= 100 %}p-high{% elif topic.priority_score >= 60 %}p-med{% else %}p-low{% endif %}" style="width:{% widthratio topic.priority_score 200 100 %}%"></div>
                                     </div>
-                                </td>
-                                <td>
-                                    <span class="status-badge {% if topic.status == 'completed' %}status-completed{% else %}status-pending{% endif %}">
-                                        {% if topic.status == 'completed' %}Done{% else %}Pending{% endif %}
-                                    </span>
-                                </td>
-                                <td>
-                                    <div class="action-cell">
-                                        <form method="POST">
-                                            {% csrf_token %}
-                                            <input type="hidden" name="action" value="toggle_status">
-                                            <input type="hidden" name="topic_id" value="{{ topic.id }}">
-                                            <button type="submit" class="btn-toggle {% if topic.status == 'completed' %}mark-undone{% else %}mark-done{% endif %}">{% if topic.status == 'completed' %}Undo{% else %}Done{% endif %}</button>
-                                        </form>
-                                        <button type="button" class="btn-edit" onclick="openEdit('{{ topic.id }}','{{ topic.name }}','{{ topic.difficulty }}','{{ topic.self_strength }}','{{ topic.estimated_hours }}')">Edit</button>
-                                        <form method="POST" onsubmit="return confirm('Delete this topic?')">
-                                            {% csrf_token %}
-                                            <input type="hidden" name="action" value="delete">
-                                            <input type="hidden" name="topic_id" value="{{ topic.id }}">
-                                            <button type="submit" class="btn-delete">Delete</button>
-                                        </form>
-                                    </div>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+                                </div>
+                            </div>
+
+                            <div class="action-cell" style="margin-top: 8px;">
+                                <form method="POST" style="flex:1;">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="toggle_status">
+                                    <input type="hidden" name="topic_id" value="{{ topic.id }}">
+                                    <button type="submit" style="width:100%;" class="btn-toggle {% if topic.status == 'completed' %}mark-undone{% else %}mark-done{% endif %}">{% if topic.status == 'completed' %}Undo{% else %}Mark Done{% endif %}</button>
+                                </form>
+                                <button type="button" class="btn-edit" onclick="openEdit('{{ topic.id }}','{{ topic.name }}','{{ topic.difficulty }}','{{ topic.self_strength }}','{{ topic.estimated_hours }}')">Edit</button>
+                                <form method="POST" onsubmit="return confirm('Delete this topic?')">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="delete">
+                                    <input type="hidden" name="topic_id" value="{{ topic.id }}">
+                                    <button type="submit" class="btn-delete">Delete</button>
+                                </form>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+
                     {% else %}
                     <div class="empty-state">
                         <p>No topics yet. Add your first topic above!</p>
@@ -567,6 +793,22 @@
         }
         document.getElementById('editModal').addEventListener('click', function(e) {
             if (e.target === this) closeEdit();
+        });
+
+        function toggleCard(bodyId, iconId) {
+            if (window.innerWidth <= 768) {
+                var body = document.getElementById(bodyId);
+                var icon = document.getElementById(iconId);
+                body.classList.toggle('open');
+                icon.classList.toggle('open');
+            }
+        }
+        
+        window.addEventListener('resize', function() {
+            if (window.innerWidth > 768) {
+                document.getElementById('add-topic-body').classList.remove('open');
+                document.getElementById('add-topic-icon').classList.remove('open');
+            }
         });
     </script>
 {% endblock %}

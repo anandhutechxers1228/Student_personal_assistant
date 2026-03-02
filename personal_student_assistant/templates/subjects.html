@@ -17,12 +17,17 @@
         .card-header {
             padding: 18px 22px 14px;
             border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
         }
 
         .card-header h2 {
             font-size: 15px;
             font-weight: 700;
             color: var(--primary-d);
+            margin: 0;
         }
 
         .card-body {
@@ -314,6 +319,56 @@
             font-weight: 600;
             font-size: 14px;
         }
+
+        .btn-expand-icon {
+            display: none;
+            font-size: 16px;
+            color: var(--muted);
+        }
+
+        @media (max-width: 1024px) {
+            .form-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+            .form-grid .btn-add {
+                height: 40px;
+                grid-column: 1 / -1;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .content {
+                padding: 16px;
+            }
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            /* Add Subject Collapsible styling */
+            .collapsible-body {
+                display: none;
+            }
+            .collapsible-body.open {
+                display: block;
+            }
+            .btn-expand-icon {
+                display: inline-block;
+                transition: transform 0.3s ease;
+            }
+            .btn-expand-icon.open {
+                transform: rotate(180deg);
+            }
+
+            .modal {
+                width: 90%;
+            }
+            .modal-grid {
+                grid-template-columns: 1fr;
+            }
+            .modal-grid .full {
+                grid-column: auto;
+            }
+        }
 {% endblock %}
 
 {% block content %}
@@ -323,10 +378,11 @@
         </div>
         <div class="content">
             <div class="card">
-                <div class="card-header">
+                <div class="card-header" onclick="toggleCard('add-subject-body', 'add-subject-icon')">
                     <h2>Add Subject</h2>
+                    <span class="btn-expand-icon" id="add-subject-icon">▼</span>
                 </div>
-                <div class="card-body">
+                <div class="card-body collapsible-body" id="add-subject-body">
                     <form method="POST">
                         {% csrf_token %}
                         <input type="hidden" name="action" value="add">
@@ -425,7 +481,6 @@
             </div>
             {% endif %}
         </div>
-    </div>
 
     <div class="modal-overlay" id="editModal">
         <div class="modal">
@@ -485,6 +540,22 @@
         }
         document.getElementById('editModal').addEventListener('click', function(e) {
             if (e.target === this) closeEdit();
+        });
+
+        function toggleCard(bodyId, iconId) {
+            if (window.innerWidth <= 768) {
+                var body = document.getElementById(bodyId);
+                var icon = document.getElementById(iconId);
+                body.classList.toggle('open');
+                icon.classList.toggle('open');
+            }
+        }
+        
+        window.addEventListener('resize', function() {
+            if (window.innerWidth > 768) {
+                document.getElementById('add-subject-body').classList.remove('open');
+                document.getElementById('add-subject-icon').classList.remove('open');
+            }
         });
     </script>
 {% endblock %}
