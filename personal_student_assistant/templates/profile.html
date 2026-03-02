@@ -1,144 +1,8 @@
-<!DOCTYPE html>
-<html lang="en">
+{% extends 'base.html' %}
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Profile - Smart Study Planner</title>
-    <style>
-        *,
-        *::before,
-        *::after {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+{% block title %}Profile - Smart Study Planner{% endblock %}
 
-        :root {
-            --primary: #007BFF;
-            --primary-d: #0056b3;
-            --primary-l: #e6f0ff;
-            --bg: #f0f4f8;
-            --white: #fff;
-            --text: #333;
-            --muted: #6c757d;
-            --success: #28a745;
-            --danger: #dc3545;
-            --sidebar-w: 240px;
-        }
-
-        body {
-            font-family: 'Segoe UI', sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            display: flex;
-            min-height: 100vh;
-        }
-
-        .sidebar {
-            width: var(--sidebar-w);
-            background: linear-gradient(180deg, #0056b3, #003d82);
-            color: white;
-            position: fixed;
-            top: 0;
-            left: 0;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            z-index: 100;
-        }
-
-        .sidebar-brand {
-            padding: 24px 20px 20px;
-            font-size: 18px;
-            font-weight: 700;
-            border-bottom: 1px solid rgba(255, 255, 255, .15);
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .nav-section {
-            padding: 16px 12px 8px;
-            font-size: 11px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: rgba(255, 255, 255, .5);
-        }
-
-        .nav-item {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 11px 20px;
-            text-decoration: none;
-            color: rgba(255, 255, 255, .85);
-            font-size: 14px;
-            border-radius: 8px;
-            margin: 2px 8px;
-            transition: background .2s;
-        }
-
-        .nav-item:hover,
-        .nav-item.active {
-            background: rgba(255, 255, 255, .15);
-            color: white;
-        }
-
-        .nav-item .icon {
-            font-size: 17px;
-            width: 22px;
-            text-align: center;
-        }
-
-        .sidebar-footer {
-            margin-top: auto;
-            padding: 16px 20px;
-            border-top: 1px solid rgba(255, 255, 255, .15);
-            font-size: 13px;
-            color: rgba(255, 255, 255, .7);
-        }
-
-        .sidebar-footer .user-name {
-            font-weight: 600;
-            color: white;
-        }
-
-        .main {
-            margin-left: var(--sidebar-w);
-            flex: 1;
-        }
-
-        .topbar {
-            background: var(--white);
-            border-bottom: 1px solid #dee2e6;
-            padding: 14px 32px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            position: sticky;
-            top: 0;
-            z-index: 50;
-        }
-
-        .topbar h1 {
-            font-size: 20px;
-            color: var(--primary-d);
-            font-weight: 700;
-        }
-
-        .btn-logout {
-            background: var(--primary-l);
-            color: var(--primary-d);
-            border: none;
-            padding: 7px 14px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: 600;
-            font-size: 13px;
-            text-decoration: none;
-        }
-
+{% block extra_css %}
         .content {
             padding: 28px 32px;
             max-width: 960px;
@@ -391,25 +255,9 @@
             font-weight: 600;
             font-size: 14px;
         }
-    </style>
-</head>
+{% endblock %}
 
-<body>
-    <aside class="sidebar">
-        <div class="sidebar-brand"><span></span> Study Planner</div>
-        <div class="nav-section">Main</div>
-        <a href="/" class="nav-item"><span class="icon"></span> Dashboard</a>
-        <a href="/schedule/" class="nav-item"><span class="icon"></span> Schedule</a>
-        <div class="nav-section">Study</div>
-        <a href="/subjects/" class="nav-item"><span class="icon"></span> Subjects</a>
-        <div class="nav-section">Account</div>
-        <a href="/profile/" class="nav-item active"><span class="icon"></span> Profile</a>
-        <div class="sidebar-footer">
-            <div class="user-name">{{ user.name }}</div>
-            <div>{{ user.email }}</div>
-        </div>
-    </aside>
-    <div class="main">
+{% block content %}
         <div class="topbar">
             <h1>Profile</h1>
             <a href="/logout/" class="btn-logout">Logout</a>
@@ -440,8 +288,7 @@
                 </div>
                 <div class="card-body">
                     <div class="progress-wrap">
-                        <div class="progress-bar" style="width:{% widthratio topics_completed topics_total 100 %}%">
-                        </div>
+                        <div class="progress-bar" style="width:{% widthratio topics_completed topics_total 100 %}%"></div>
                     </div>
                     <div class="prog-label">
                         <span>{{ topics_completed }} of {{ topics_total }} topics completed</span>
@@ -465,18 +312,13 @@
                         <form method="POST">
                             {% csrf_token %}
                             <input type="hidden" name="action" value="update_profile">
-                            <div class="form-group"><label>Full Name</label><input type="text" name="name"
-                                    value="{{ user.name }}" required></div>
-                            <div class="form-group"><label>Phone</label><input type="text" name="phone"
-                                    value="{{ user.phone }}"></div>
-                            <div class="form-group"><label>Email (read-only)</label><input type="email"
-                                    value="{{ user.email }}" disabled style="background:#f8f9fa;"></div>
+                            <div class="form-group"><label>Full Name</label><input type="text" name="name" value="{{ user.name }}" required></div>
+                            <div class="form-group"><label>Phone</label><input type="text" name="phone" value="{{ user.phone }}"></div>
+                            <div class="form-group"><label>Email (read-only)</label><input type="email" value="{{ user.email }}" disabled style="background:#f8f9fa;"></div>
                             <button type="submit" class="btn-save">Save Changes</button>
                         </form>
                         <br>
-                        <button type="button" class="btn-change-pw"
-                            onclick="document.getElementById('pwModal').classList.add('open')">🔒 Change
-                            Password</button>
+                        <button type="button" class="btn-change-pw" onclick="document.getElementById('pwModal').classList.add('open')">🔒 Change Password</button>
                     </div>
                 </div>
                 <div class="right-stack">
@@ -486,19 +328,16 @@
                         </div>
                         <div class="card-body">
                             {% if user.badges %}
-                            <div class="badges-row">{% for badge in user.badges %}<span class="badge-chip">{{ badge}}</span>{% endfor %}</div>
+                            <div class="badges-row">{% for badge in user.badges %}<span class="badge-chip">{{ badge }}</span>{% endfor %}</div>
                             {% else %}
-                            <p style="color:var(--muted);font-size:14px;">No badges yet — complete tasks to earn them!
-                                🎯</p>
+                            <p style="color:var(--muted);font-size:14px;">No badges yet — complete tasks to earn them! 🎯</p>
                             {% endif %}
-                            <p style="font-size:12px;color:var(--muted);margin-top:12px;">Earn badges by completing
-                                tasks, maintaining streaks, and hitting point milestones.</p>
+                            <p style="font-size:12px;color:var(--muted);margin-top:12px;">Earn badges by completing tasks, maintaining streaks, and hitting point milestones.</p>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
 
     <div class="modal-overlay" id="pwModal">
         <div class="modal">
@@ -506,13 +345,10 @@
             <form method="POST">
                 {% csrf_token %}
                 <input type="hidden" name="action" value="change_password">
-                <div class="form-group"><label>Current Password</label><input type="password" name="old_password"
-                        required></div>
-                <div class="form-group"><label>New Password</label><input type="password" name="new_password" required>
-                </div>
+                <div class="form-group"><label>Current Password</label><input type="password" name="old_password" required></div>
+                <div class="form-group"><label>New Password</label><input type="password" name="new_password" required></div>
                 <div class="modal-actions">
-                    <button type="button" class="btn-cancel"
-                        onclick="document.getElementById('pwModal').classList.remove('open')">Cancel</button>
+                    <button type="button" class="btn-cancel" onclick="document.getElementById('pwModal').classList.remove('open')">Cancel</button>
                     <button type="submit" class="btn-save">Update Password</button>
                 </div>
             </form>
@@ -520,10 +356,8 @@
     </div>
 
     <script>
-        document.getElementById('pwModal').addEventListener('click', function (e) {
+        document.getElementById('pwModal').addEventListener('click', function(e) {
             if (e.target === this) this.classList.remove('open');
         });
     </script>
-</body>
-
-</html>
+{% endblock %}

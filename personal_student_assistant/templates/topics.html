@@ -1,130 +1,10 @@
-<!DOCTYPE html>
-<html lang="en">
+{% extends 'base.html' %}
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Topics - {{ subject.name }}</title>
-    <style>
-        *,
-        *::before,
-        *::after {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+{% block title %}Topics - {{ subject.name }}{% endblock %}
 
-        :root {
-            --primary: #007BFF;
-            --primary-d: #0056b3;
-            --primary-l: #e6f0ff;
-            --bg: #f0f4f8;
-            --white: #fff;
-            --text: #333;
-            --muted: #6c757d;
-            --success: #28a745;
-            --danger: #dc3545;
-            --sidebar-w: 240px;
-        }
-
-        body {
-            font-family: 'Segoe UI', sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            display: flex;
-            min-height: 100vh;
-        }
-
-        .sidebar {
-            width: var(--sidebar-w);
-            background: linear-gradient(180deg, #0056b3, #003d82);
-            color: white;
-            position: fixed;
-            top: 0;
-            left: 0;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            z-index: 100;
-        }
-
-        .sidebar-brand {
-            padding: 24px 20px 20px;
-            font-size: 18px;
-            font-weight: 700;
-            border-bottom: 1px solid rgba(255, 255, 255, .15);
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .nav-section {
-            padding: 16px 12px 8px;
-            font-size: 11px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: rgba(255, 255, 255, .5);
-        }
-
-        .nav-item {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 11px 20px;
-            text-decoration: none;
-            color: rgba(255, 255, 255, .85);
-            font-size: 14px;
-            border-radius: 8px;
-            margin: 2px 8px;
-            transition: background .2s;
-        }
-
-        .nav-item:hover,
-        .nav-item.active {
-            background: rgba(255, 255, 255, .15);
-            color: white;
-        }
-
-        .nav-item .icon {
-            font-size: 17px;
-            width: 22px;
-            text-align: center;
-        }
-
-        .sidebar-footer {
-            margin-top: auto;
-            padding: 16px 20px;
-            border-top: 1px solid rgba(255, 255, 255, .15);
-            font-size: 13px;
-            color: rgba(255, 255, 255, .7);
-        }
-
-        .sidebar-footer .user-name {
-            font-weight: 600;
-            color: white;
-        }
-
-        .main {
-            margin-left: var(--sidebar-w);
-            flex: 1;
-        }
-
-        .topbar {
-            background: var(--white);
-            border-bottom: 1px solid #dee2e6;
-            padding: 14px 32px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            position: sticky;
-            top: 0;
-            z-index: 50;
-        }
-
-        .topbar h1 {
-            font-size: 20px;
-            color: var(--primary-d);
-            font-weight: 700;
+{% block extra_css %}
+        .content {
+            padding: 28px 32px;
         }
 
         .breadcrumb {
@@ -135,22 +15,6 @@
         .breadcrumb a {
             color: var(--primary);
             text-decoration: none;
-        }
-
-        .btn-logout {
-            background: var(--primary-l);
-            color: var(--primary-d);
-            border: none;
-            padding: 7px 14px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: 600;
-            font-size: 13px;
-            text-decoration: none;
-        }
-
-        .content {
-            padding: 28px 32px;
         }
 
         .subject-banner {
@@ -497,25 +361,9 @@
             font-weight: 600;
             font-size: 14px;
         }
-    </style>
-</head>
+{% endblock %}
 
-<body>
-    <aside class="sidebar">
-        <div class="sidebar-brand"><span>&#128218;</span> Study Planner</div>
-        <div class="nav-section">Main</div>
-        <a href="/" class="nav-item"><span class="icon">&#127968;</span> Dashboard</a>
-        <a href="/schedule/" class="nav-item"><span class="icon">&#128197;</span> Schedule</a>
-        <div class="nav-section">Study</div>
-        <a href="/subjects/" class="nav-item active"><span class="icon">&#128214;</span> Subjects</a>
-        <div class="nav-section">Account</div>
-        <a href="/profile/" class="nav-item"><span class="icon">&#128100;</span> Profile</a>
-        <div class="sidebar-footer">
-            <div class="user-name">{{ user.name }}</div>
-            <div>{{ user.email }}</div>
-        </div>
-    </aside>
-    <div class="main">
+{% block content %}
         <div class="topbar">
             <div>
                 <h1>{{ subject.name }}</h1>
@@ -527,8 +375,7 @@
             <div class="subject-banner" style="background:linear-gradient(135deg,{{ subject.color }},#003d82)">
                 <div>
                     <div class="banner-name">{{ subject.name }}</div>
-                    <div class="banner-meta">Exam: {{ subject.exam_date }} | Importance: {{ subject.weightage }}/10
-                    </div>
+                    <div class="banner-meta">Exam: {{ subject.exam_date }} | Importance: {{ subject.weightage }}/10</div>
                 </div>
                 <div class="banner-stats">
                     <div class="bs-item">
@@ -576,8 +423,7 @@
                             </div>
                             <div class="form-group">
                                 <label>Est. Hours</label>
-                                <input type="number" name="estimated_hours" placeholder="1.0" step="0.5" min="0.5"
-                                    value="1">
+                                <input type="number" name="estimated_hours" placeholder="1.0" step="0.5" min="0.5" value="1">
                             </div>
                             <button type="submit" class="btn-add">Add</button>
                         </div>
@@ -609,20 +455,16 @@
                             <tr class="{% if topic.status == 'completed' %}row-completed{% endif %}">
                                 <td style="color:var(--muted);font-size:13px;">{{ forloop.counter }}</td>
                                 <td class="topic-name" style="font-weight:600;">{{ topic.name }}</td>
-                                <td><span class="stars" data-val="{{ topic.difficulty }}" data-max="5"
-                                        data-filled="&#11088;" data-empty="&#9734;"></span></td>
-                                <td><span class="stars" data-val="{{ topic.self_strength }}" data-max="5"
-                                        data-filled="&#128170;" data-empty="&#9711;"></span></td>
+                                <td><span class="stars" data-val="{{ topic.difficulty }}" data-max="5" data-filled="&#11088;" data-empty="&#9734;"></span></td>
+                                <td><span class="stars" data-val="{{ topic.self_strength }}" data-max="5" data-filled="&#128170;" data-empty="&#9711;"></span></td>
                                 <td>{{ topic.estimated_hours }}h</td>
                                 <td>
                                     <div class="priority-bar-wrap">
-                                        <div class="priority-bar {% if topic.priority_score >= 100 %}p-high{% elif topic.priority_score >= 60 %}p-med{% else %}p-low{% endif %}"
-                                            style="width:{% widthratio topic.priority_score 200 100 %}%"></div>
+                                        <div class="priority-bar {% if topic.priority_score >= 100 %}p-high{% elif topic.priority_score >= 60 %}p-med{% else %}p-low{% endif %}" style="width:{% widthratio topic.priority_score 200 100 %}%"></div>
                                     </div>
                                 </td>
                                 <td>
-                                    <span
-                                        class="status-badge {% if topic.status == 'completed' %}status-completed{% else %}status-pending{% endif %}">
+                                    <span class="status-badge {% if topic.status == 'completed' %}status-completed{% else %}status-pending{% endif %}">
                                         {% if topic.status == 'completed' %}Done{% else %}Pending{% endif %}
                                     </span>
                                 </td>
@@ -632,15 +474,9 @@
                                             {% csrf_token %}
                                             <input type="hidden" name="action" value="toggle_status">
                                             <input type="hidden" name="topic_id" value="{{ topic.id }}">
-                                            <button type="submit"
-                                                class="btn-toggle {% if topic.status == 'completed' %}mark-undone{% else %}mark-done{% endif %}">
-                                                {% if topic.status == 'completed' %}Undo{% else %}Done{% endif %}
-                                            </button>
+                                            <button type="submit" class="btn-toggle {% if topic.status == 'completed' %}mark-undone{% else %}mark-done{% endif %}">{% if topic.status == 'completed' %}Undo{% else %}Done{% endif %}</button>
                                         </form>
-                                        <button type="button" class="btn-edit"
-                                            onclick="openEdit('{{ topic.id }}','{{ topic.name }}','{{ topic.difficulty }}','{{ topic.self_strength }}','{{ topic.estimated_hours }}')">
-                                            Edit
-                                        </button>
+                                        <button type="button" class="btn-edit" onclick="openEdit('{{ topic.id }}','{{ topic.name }}','{{ topic.difficulty }}','{{ topic.self_strength }}','{{ topic.estimated_hours }}')">Edit</button>
                                         <form method="POST" onsubmit="return confirm('Delete this topic?')">
                                             {% csrf_token %}
                                             <input type="hidden" name="action" value="delete">
@@ -661,7 +497,6 @@
                 </div>
             </div>
         </div>
-    </div>
 
     <div class="modal-overlay" id="editModal">
         <div class="modal">
@@ -709,7 +544,7 @@
     </div>
 
     <script>
-        document.querySelectorAll('.stars').forEach(function (el) {
+        document.querySelectorAll('.stars').forEach(function(el) {
             var val = parseInt(el.dataset.val) || 0;
             var max = parseInt(el.dataset.max) || 5;
             var out = '';
@@ -730,10 +565,8 @@
         function closeEdit() {
             document.getElementById('editModal').classList.remove('open');
         }
-        document.getElementById('editModal').addEventListener('click', function (e) {
+        document.getElementById('editModal').addEventListener('click', function(e) {
             if (e.target === this) closeEdit();
         });
     </script>
-</body>
-
-</html>
+{% endblock %}

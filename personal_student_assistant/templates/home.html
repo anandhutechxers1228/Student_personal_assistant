@@ -1,153 +1,14 @@
-<!DOCTYPE html>
-<html lang="en">
+{% extends 'base.html' %}
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - Smart Study Planner</title>
-    <style>
-        *,
-        *::before,
-        *::after {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+{% block title %}Dashboard - Smart Study Planner{% endblock %}
 
-        :root {
-            --primary: #007BFF;
-            --primary-d: #0056b3;
-            --primary-l: #e6f0ff;
-            --bg: #f0f4f8;
-            --white: #fff;
-            --text: #333;
-            --muted: #6c757d;
-            --success: #28a745;
-            --sidebar-w: 240px;
-        }
-
-        body {
-            font-family: 'Segoe UI', sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            display: flex;
-            min-height: 100vh;
-        }
-
-        .sidebar {
-            width: var(--sidebar-w);
-            background: linear-gradient(180deg, #0056b3, #003d82);
-            color: white;
-            position: fixed;
-            top: 0;
-            left: 0;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            z-index: 100;
-        }
-
-        .sidebar-brand {
-            padding: 24px 20px 20px;
-            font-size: 18px;
-            font-weight: 700;
-            border-bottom: 1px solid rgba(255, 255, 255, .15);
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .nav-section {
-            padding: 16px 12px 8px;
-            font-size: 11px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: rgba(255, 255, 255, .5);
-        }
-
-        .nav-item {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 11px 20px;
-            text-decoration: none;
-            color: rgba(255, 255, 255, .85);
-            font-size: 14px;
-            border-radius: 8px;
-            margin: 2px 8px;
-            transition: background .2s;
-        }
-
-        .nav-item:hover,
-        .nav-item.active {
-            background: rgba(255, 255, 255, .15);
-            color: white;
-        }
-
-        .nav-item .icon {
-            font-size: 17px;
-            width: 22px;
-            text-align: center;
-        }
-
-        .sidebar-footer {
-            margin-top: auto;
-            padding: 16px 20px;
-            border-top: 1px solid rgba(255, 255, 255, .15);
-            font-size: 13px;
-            color: rgba(255, 255, 255, .7);
-        }
-
-        .sidebar-footer .user-name {
-            font-weight: 600;
-            color: white;
-        }
-
-        .main {
-            margin-left: var(--sidebar-w);
-            flex: 1;
-        }
-
-        .topbar {
-            background: var(--white);
-            border-bottom: 1px solid #dee2e6;
-            padding: 14px 32px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            position: sticky;
-            top: 0;
-            z-index: 50;
-        }
-
-        .topbar h1 {
-            font-size: 20px;
-            color: var(--primary-d);
-            font-weight: 700;
-        }
-
+{% block extra_css %}
         .topbar-right {
             display: flex;
             align-items: center;
             gap: 14px;
             font-size: 14px;
             color: var(--muted);
-        }
-
-        .btn-logout {
-            background: var(--primary-l);
-            color: var(--primary-d);
-            border: none;
-            padding: 7px 14px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: 600;
-            font-size: 13px;
-            text-decoration: none;
-        }
-
-        .btn-logout:hover {
-            background: #cfe2ff;
         }
 
         .content {
@@ -397,25 +258,9 @@
             flex-direction: column;
             gap: 22px;
         }
-    </style>
-</head>
+{% endblock %}
 
-<body>
-    <aside class="sidebar">
-        <div class="sidebar-brand"><span></span> Study Planner</div>
-        <div class="nav-section">Main</div>
-        <a href="/" class="nav-item active"><span class="icon"></span> Dashboard</a>
-        <a href="/schedule/" class="nav-item"><span class="icon"></span> Schedule</a>
-        <div class="nav-section">Study</div>
-        <a href="/subjects/" class="nav-item"><span class="icon"></span> Subjects</a>
-        <div class="nav-section">Account</div>
-        <a href="/profile/" class="nav-item"><span class="icon"></span> Profile</a>
-        <div class="sidebar-footer">
-            <div class="user-name">{{ user.name }}</div>
-            <div>{{ user.email }}</div>
-        </div>
-    </aside>
-    <div class="main">
+{% block content %}
         <div class="topbar">
             <h1>Dashboard</h1>
             <div class="topbar-right">
@@ -459,8 +304,7 @@
                     </div>
                     <div class="card-body">
                         {% for task in today_tasks %}
-                        <div
-                            class="session-item {% if task.is_break %}is-break{% endif %} {% if task.completed %}completed{% endif %}">
+                        <div class="session-item {% if task.is_break %}is-break{% endif %} {% if task.completed %}completed{% endif %}">
                             <div class="session-time">{{ task.start_time }} - {{ task.end_time }}</div>
                             <div class="session-info">
                                 {% if task.is_break %}
@@ -486,8 +330,7 @@
                             {% endif %}
                         </div>
                         {% empty %}
-                        <div class="empty-msg">No sessions today.<br><a href="/schedule/">Generate a schedule →</a>
-                        </div>
+                        <div class="empty-msg">No sessions today.<br><a href="/schedule/">Generate a schedule →</a></div>
                         {% endfor %}
                     </div>
                 </div>
@@ -506,10 +349,8 @@
                                         <div class="exam-name">{{ exam.name }}</div>
                                         <div class="exam-date">{{ exam.exam_date }}</div>
                                     </div>
-                                    <div
-                                        class="exam-days {% if exam.days_until_exam is not None %}{% if exam.days_until_exam <= 3 %}urgent{% elif exam.days_until_exam <= 7 %}warning{% else %}safe{% endif %}{% endif %}">
-                                        {% if exam.days_until_exam == 0 %}Today!{% elif exam.days_until_exam == 1
-                                        %}Tomorrow{% else %}{{ exam.days_until_exam }}d{% endif %}
+                                    <div class="exam-days {% if exam.days_until_exam is not None %}{% if exam.days_until_exam <= 3 %}urgent{% elif exam.days_until_exam <= 7 %}warning{% else %}safe{% endif %}{% endif %}">
+                                        {% if exam.days_until_exam == 0 %}Today!{% elif exam.days_until_exam == 1 %}Tomorrow{% else %}{{ exam.days_until_exam }}d{% endif %}
                                     </div>
                                 </div>
                                 {% endfor %}
@@ -525,16 +366,13 @@
                         </div>
                         <div class="card-body">
                             {% if user.badges %}
-                            <div class="badges-row">{% for badge in user.badges %}<span class="badge-chip">{{badge}}</span>{% endfor %}</div>
+                            <div class="badges-row">{% for badge in user.badges %}<span class="badge-chip">{{ badge }}</span>{% endfor %}</div>
                             {% else %}
-                            <div class="empty-msg">Complete tasks to earn badges!</div>
+                            <div class="empty-msg">No badges yet — complete tasks to earn them! 🎯</div>
                             {% endif %}
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
-</body>
-
-</html>
+{% endblock %}
