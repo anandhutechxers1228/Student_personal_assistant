@@ -1,3 +1,5 @@
+# views.py
+
 from django.shortcuts import render, redirect
 from django.contrib.auth.hashers import make_password, check_password
 from .db_connector import get_db
@@ -318,6 +320,10 @@ def schedule_view(request):
             user = db['users'].find_one({'email': user_email})
             generate_week_schedule(user_email, db, user)
             return redirect('schedule')
+        elif action == 'generate_today':
+            user = db['users'].find_one({'email': user_email})
+            generate_week_schedule(user_email, db, user, single_day=True)
+            return redirect('schedule')
         elif action == 'clear':
             db['scheduled_tasks'].delete_many({
                 'user_email': user_email,
@@ -358,12 +364,15 @@ def schedule_view(request):
     })
 
 
-def generate_week_schedule(user_email, db, user):
+def generate_week_schedule(user_email, db, user, single_day=False):
     now = datetime.now()
     today = date.today()
 
-    days_until_sunday = 6 - today.weekday()
-    num_days = days_until_sunday + 1
+    if single_day:
+        num_days = 1
+    else:
+        days_until_sunday = 6 - today.weekday()
+        num_days = days_until_sunday + 1
 
     study_start = user.get('study_start_time', '18:00')
     study_end = user.get('study_end_time', '22:00')
@@ -378,11 +387,18 @@ def generate_week_schedule(user_email, db, user):
     if end_min_global - start_min_global <= 0:
         return
 
-    db['scheduled_tasks'].delete_many({
-        'user_email': user_email,
-        'date': {'$gte': today.isoformat()},
-        'completed': {'$ne': True},
-    })
+    if single_day:
+        db['scheduled_tasks'].delete_many({
+            'user_email': user_email,
+            'date': today.isoformat(),
+            'completed': {'$ne': True},
+        })
+    else:
+        db['scheduled_tasks'].delete_many({
+            'user_email': user_email,
+            'date': {'$gte': today.isoformat()},
+            'completed': {'$ne': True},
+        })
 
     subjects_map = {str(s['_id']): s for s in db['subjects'].find({'user_email': user_email})}
     topics = list(db['topics'].find({'user_email': user_email, 'status': 'pending'}))

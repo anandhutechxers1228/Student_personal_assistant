@@ -257,7 +257,12 @@
                 <form method="POST" onsubmit="return confirmGenerate(event)">
                     {% csrf_token %}
                     <input type="hidden" name="action" value="generate">
-                    <button type="submit" class="btn-primary">✨ Generate Schedule</button>
+                    <button type="submit" class="btn-primary">✨ Generate Week Schedule</button>
+                </form>
+                <form method="POST">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="generate_today">
+                    <button type="submit" class="btn-primary" style="background-color: var(--primary);">✨ Generate Today</button>
                 </form>
                 <form method="POST" onsubmit="return confirm('Clear all upcoming unfinished sessions?')">
                     {% csrf_token %}
