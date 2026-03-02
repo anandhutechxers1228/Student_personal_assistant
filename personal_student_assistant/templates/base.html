@@ -149,14 +149,14 @@
 
 <body>
     <aside class="sidebar">
-        <div class="sidebar-brand"><span>&#128218;</span> Study Planner</div>
+        <div class="sidebar-brand">Study Planner</div>
         <div class="nav-section">Main</div>
-        <a href="/" class="nav-item {% if request.path == '/' %}active{% endif %}"><span class="icon">&#127968;</span> Dashboard</a>
-        <a href="/schedule/" class="nav-item {% if request.path == '/schedule/' %}active{% endif %}"><span class="icon">&#128197;</span> Schedule</a>
+        <a href="/" class="nav-item {% if request.path == '/' %}active{% endif %}">Dashboard</a>
+        <a href="/schedule/" class="nav-item {% if request.path == '/schedule/' %}active{% endif %}">Schedule</a>
         <div class="nav-section">Study</div>
-        <a href="/subjects/" class="nav-item {% if '/subjects' in request.path %}active{% endif %}"><span class="icon">&#128214;</span> Subjects</a>
+        <a href="/subjects/" class="nav-item {% if '/subjects' in request.path %}active{% endif %}">Subjects</a>
         <div class="nav-section">Account</div>
-        <a href="/profile/" class="nav-item {% if request.path == '/profile/' %}active{% endif %}"><span class="icon">&#128100;</span> Profile</a>
+        <a href="/profile/" class="nav-item {% if request.path == '/profile/' %}active{% endif %}">Profile</a>
         <div class="sidebar-footer">
             <div class="user-name">{{ user.name }}</div>
             <div>{{ user.email }}</div>
