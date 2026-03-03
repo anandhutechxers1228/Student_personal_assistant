@@ -1,8 +1,7 @@
-# views.py
-
 from django.shortcuts import render, redirect
 from django.contrib.auth.hashers import make_password, check_password
 from .db_connector import get_db
+from .ai_scheduler import get_sentiment_score, get_peak_window, get_subject_time_ratios, get_global_avg_ratio, ai_prioritize_topics, has_enough_data
 from bson import ObjectId
 from datetime import datetime, timedelta, date
 
@@ -158,6 +157,14 @@ def home_view(request):
     subject_count = db['subjects'].count_documents({'user_email': user_email})
     pending_topics = db['topics'].count_documents({'user_email': user_email, 'status': 'pending'})
 
+    today_remark = db['daily_remarks'].find_one({'user_email': user_email, 'date': today_str})
+    show_remark_prompt = today_completed > 0 and today_remark is None
+
+    completed_tasks_all = list(db['scheduled_tasks'].find({
+        'user_email': user_email, 'completed': True, 'is_break': {'$ne': True}
+    }))
+    peak_window = get_peak_window(completed_tasks_all)
+
     return render(request, 'home.html', {
         'user': user,
         'today_tasks': today_tasks,
@@ -168,6 +175,9 @@ def home_view(request):
         'subject_count': subject_count,
         'pending_topics': pending_topics,
         'today': today_str,
+        'show_remark_prompt': show_remark_prompt,
+        'today_remark': today_remark,
+        'peak_window': peak_window,
     })
 
 
@@ -318,11 +328,17 @@ def schedule_view(request):
             user = db['users'].find_one({'email': user_email})
         elif action == 'generate':
             user = db['users'].find_one({'email': user_email})
-            generate_week_schedule(user_email, db, user)
+            completed_count = db['scheduled_tasks'].count_documents({'user_email': user_email, 'completed': True, 'is_break': {'$ne': True}})
+            remarks_count = db['daily_remarks'].count_documents({'user_email': user_email})
+            use_ai = has_enough_data(completed_count, remarks_count)
+            generate_week_schedule(user_email, db, user, use_ai=use_ai)
             return redirect('schedule')
         elif action == 'generate_today':
             user = db['users'].find_one({'email': user_email})
-            generate_week_schedule(user_email, db, user, single_day=True)
+            completed_count = db['scheduled_tasks'].count_documents({'user_email': user_email, 'completed': True, 'is_break': {'$ne': True}})
+            remarks_count = db['daily_remarks'].count_documents({'user_email': user_email})
+            use_ai = has_enough_data(completed_count, remarks_count)
+            generate_week_schedule(user_email, db, user, single_day=True, use_ai=use_ai)
             return redirect('schedule')
         elif action == 'clear':
             db['scheduled_tasks'].delete_many({
@@ -364,7 +380,7 @@ def schedule_view(request):
     })
 
 
-def generate_week_schedule(user_email, db, user, single_day=False):
+def generate_week_schedule(user_email, db, user, single_day=False, use_ai=False):
     now = datetime.now()
     today = date.today()
 
@@ -418,8 +434,25 @@ def generate_week_schedule(user_email, db, user, single_day=False):
         total_min = int(t.get('estimated_hours', 1) * 60)
         t['remaining_minutes'] = max(0, total_min - completed_min)
 
-    topics = [t for t in topics if t['remaining_minutes'] > 0]
-    topics.sort(key=lambda x: x['priority_score'], reverse=True)
+    if use_ai:
+        completed_tasks_all = list(db['scheduled_tasks'].find({
+            'user_email': user_email, 'completed': True, 'is_break': {'$ne': True}
+        }))
+        recent_remarks = list(db['daily_remarks'].find({'user_email': user_email}).sort('date', -1).limit(7))
+        subject_ratios, subject_counts = get_subject_time_ratios(completed_tasks_all)
+        global_avg = get_global_avg_ratio(subject_ratios)
+        for t in topics:
+            t['already_done_minutes'] = sum(
+                ct.get('actual_minutes', ct.get('duration_minutes', 0))
+                for ct in completed_tasks_all if ct.get('topic_id') == t['id']
+            )
+        topics = ai_prioritize_topics(topics, completed_tasks_all, recent_remarks, subject_ratios, subject_counts, global_avg)
+        for t in topics:
+            t['remaining_minutes'] = max(0, t.get('ai_estimated_minutes', t.get('estimated_hours', 1) * 60) - t.get('already_done_minutes', 0))
+        topics = [t for t in topics if t['remaining_minutes'] > 0]
+    else:
+        topics = [t for t in topics if t['remaining_minutes'] > 0]
+        topics.sort(key=lambda x: x['priority_score'], reverse=True)
 
     task_queue = []
     for topic in topics:
@@ -530,12 +563,20 @@ def complete_task(request):
     task = db['scheduled_tasks'].find_one({'_id': ObjectId(task_id), 'user_email': user_email})
 
     if task and not task.get('completed'):
-        actual = int(actual_min) if actual_min else task.get('duration_minutes', 0)
+        now_dt = datetime.now()
+        try:
+            task_date = task.get('date', date.today().isoformat())
+            task_start = task.get('start_time', '00:00')
+            start_dt = datetime.strptime(task_date + ' ' + task_start, '%Y-%m-%d %H:%M')
+            actual = max(1, int((now_dt - start_dt).total_seconds() / 60))
+            actual = min(actual, task.get('duration_minutes', 60) * 5)
+        except Exception:
+            actual = task.get('duration_minutes', 0)
         db['scheduled_tasks'].update_one(
             {'_id': ObjectId(task_id)},
             {'$set': {
                 'completed': True,
-                'completed_at': datetime.utcnow().isoformat(),
+                'completed_at': now_dt.isoformat(),
                 'actual_minutes': actual,
             }}
         )
@@ -543,6 +584,40 @@ def complete_task(request):
         db['users'].update_one({'email': user_email}, {'$inc': {'points': points}})
         award_badges(user_email, db)
     return redirect(redirect_to)
+
+
+def daily_remark_view(request):
+    if request.method != 'POST':
+        return redirect('home')
+    user_email = get_current_user(request)
+    if not user_email:
+        return redirect('login')
+    db = get_db()
+    today_str = date.today().isoformat()
+    rating = int(request.POST.get('rating', 3))
+    remark_text = request.POST.get('remark_text', '').strip()
+    daily_score = get_sentiment_score(remark_text if remark_text else None, rating)
+    existing = db['daily_remarks'].find_one({'user_email': user_email, 'date': today_str})
+    if existing:
+        db['daily_remarks'].update_one(
+            {'user_email': user_email, 'date': today_str},
+            {'$set': {
+                'rating': rating,
+                'remark_text': remark_text,
+                'daily_score': daily_score,
+                'updated_at': datetime.utcnow().isoformat(),
+            }}
+        )
+    else:
+        db['daily_remarks'].insert_one({
+            'user_email': user_email,
+            'date': today_str,
+            'rating': rating,
+            'remark_text': remark_text,
+            'daily_score': daily_score,
+            'created_at': datetime.utcnow().isoformat(),
+        })
+    return redirect('home')
 
 
 def profile_view(request):
