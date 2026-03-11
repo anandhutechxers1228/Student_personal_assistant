@@ -1,9 +1,14 @@
 from django.shortcuts import render, redirect
+from django.http import JsonResponse
 from django.contrib.auth.hashers import make_password, check_password
 from .db_connector import get_db
-from .ai_scheduler import get_sentiment_score, get_peak_window, get_subject_time_ratios, get_global_avg_ratio, ai_prioritize_topics, has_enough_data
+from .ai_scheduler import (
+    get_sentiment_score, get_peak_window, get_subject_time_ratios, 
+    get_global_avg_ratio, ai_prioritize_topics, has_enough_data, get_effective_ratio
+)
 from bson import ObjectId
 from datetime import datetime, timedelta, date
+import json
 
 
 def get_current_user(request):
@@ -17,7 +22,8 @@ def fix_id(doc):
 
 def calculate_streak(user_email, db):
     streak = 0
-    for i in range(60):
+    started = False
+    for i in range(90):
         d = (date.today() - timedelta(days=i)).isoformat()
         completed = db['scheduled_tasks'].count_documents({
             'user_email': user_email,
@@ -27,7 +33,8 @@ def calculate_streak(user_email, db):
         })
         if completed > 0:
             streak += 1
-        elif i > 0:
+            started = True
+        elif started:
             break
     return streak
 
@@ -133,6 +140,31 @@ def home_view(request):
     ).sort('start_time', 1))
     for t in today_tasks:
         fix_id(t)
+    _ht_ids = list(set(str(t.get('topic_id', '')) for t in today_tasks if not t.get('is_break') and t.get('topic_id')))
+    _ht_secs = {}
+    for _tid in _ht_ids:
+        if _tid:
+            _sl = list(db['sections'].find({'topic_id': _tid, 'user_email': user_email}).sort('order', 1))
+            for _s in _sl:
+                fix_id(_s)
+            _ht_secs[_tid] = _sl
+    for t in today_tasks:
+        if not t.get('is_break') and t.get('topic_id'):
+            _tid = str(t['topic_id'])
+            _sl = _ht_secs.get(_tid, [])
+            _incomplete_secs = [_s for _s in _sl if not _s.get('completed')]
+            _pin = str(t.get('pinned_section_id', ''))
+            if _pin == '__done__':
+                t['current_section'] = _incomplete_secs[0] if _incomplete_secs else None
+            elif _pin:
+                _pinned_sec = next((_s for _s in _sl if _s['id'] == _pin), None)
+                if _pinned_sec and not _pinned_sec.get('completed'):
+                    t['current_section'] = _pinned_sec
+                else:
+                    t['current_section'] = _incomplete_secs[0] if _incomplete_secs else None
+            else:
+                t['current_section'] = _incomplete_secs[0] if _incomplete_secs else None
+            t['all_sections_complete'] = bool(_sl) and not bool(_incomplete_secs)
 
     upcoming_exams = list(db['subjects'].find({
         'user_email': user_email,
@@ -284,6 +316,29 @@ def topics_view(request, subject_id):
             if new_s == 'completed':
                 db['users'].update_one({'email': user_email}, {'$inc': {'points': 15}})
                 award_badges(user_email, db)
+        elif action == 'add_section':
+            topic_id_for_sec = request.POST.get('topic_id')
+            max_sec = db['sections'].find_one({'topic_id': topic_id_for_sec, 'user_email': user_email}, sort=[('order', -1)])
+            next_order = (max_sec.get('order', 0) + 1) if max_sec else 0
+            db['sections'].insert_one({
+                'user_email': user_email,
+                'topic_id': topic_id_for_sec,
+                'name': request.POST.get('section_name'),
+                'order': next_order,
+            })
+        elif action == 'edit_section':
+            db['sections'].update_one(
+                {'_id': ObjectId(request.POST.get('section_id')), 'user_email': user_email},
+                {'$set': {'name': request.POST.get('section_name')}}
+            )
+        elif action == 'delete_section':
+            sec_del_id = request.POST.get('section_id')
+            db['sections'].delete_one({'_id': ObjectId(sec_del_id), 'user_email': user_email})
+        elif action == 'reorder_sections':
+            ids = json.loads(request.POST.get('order', '[]'))
+            for i, sid2 in enumerate(ids):
+                db['sections'].update_one({'_id': ObjectId(sid2), 'user_email': user_email}, {'$set': {'order': i}})
+            return redirect('topics', subject_id=subject_id)
         return redirect('topics', subject_id=subject_id)
 
     topics = list(db['topics'].find({'subject_id': subject_id, 'user_email': user_email}))
@@ -298,6 +353,16 @@ def topics_view(request, subject_id):
     topics.sort(key=lambda x: x['priority_score'], reverse=True)
     total_topics = len(topics)
     completed_topics = sum(1 for t in topics if t['status'] == 'completed')
+
+    topic_ids = [t['id'] for t in topics]
+    all_sections = list(db['sections'].find({'topic_id': {'$in': topic_ids}, 'user_email': user_email}).sort('order', 1))
+    for s in all_sections:
+        fix_id(s)
+    sections_by_topic = {}
+    for s in all_sections:
+        sections_by_topic.setdefault(s['topic_id'], []).append(s)
+    for t in topics:
+        t['sections'] = sections_by_topic.get(t['id'], [])
 
     return render(request, 'topics.html', {
         'user': db['users'].find_one({'email': user_email}),
@@ -328,17 +393,19 @@ def schedule_view(request):
             user = db['users'].find_one({'email': user_email})
         elif action == 'generate':
             user = db['users'].find_one({'email': user_email})
-            completed_count = db['scheduled_tasks'].count_documents({'user_email': user_email, 'completed': True, 'is_break': {'$ne': True}})
-            remarks_count = db['daily_remarks'].count_documents({'user_email': user_email})
-            use_ai = has_enough_data(completed_count, remarks_count)
-            generate_week_schedule(user_email, db, user, use_ai=use_ai)
+            generate_week_schedule(user_email, db, user, use_ai=False)
             return redirect('schedule')
         elif action == 'generate_today':
             user = db['users'].find_one({'email': user_email})
-            completed_count = db['scheduled_tasks'].count_documents({'user_email': user_email, 'completed': True, 'is_break': {'$ne': True}})
-            remarks_count = db['daily_remarks'].count_documents({'user_email': user_email})
-            use_ai = has_enough_data(completed_count, remarks_count)
-            generate_week_schedule(user_email, db, user, single_day=True, use_ai=use_ai)
+            generate_week_schedule(user_email, db, user, single_day=True, use_ai=False)
+            return redirect('schedule')
+        elif action == 'generate_ai':
+            user = db['users'].find_one({'email': user_email})
+            generate_week_schedule(user_email, db, user, use_ai=True)
+            return redirect('schedule')
+        elif action == 'generate_today_ai':
+            user = db['users'].find_one({'email': user_email})
+            generate_week_schedule(user_email, db, user, single_day=True, use_ai=True)
             return redirect('schedule')
         elif action == 'clear':
             db['scheduled_tasks'].delete_many({
@@ -372,11 +439,60 @@ def schedule_view(request):
         'completed': {'$ne': True},
     }) > 0
 
+    all_topic_ids = list(set(
+        str(t.get('topic_id', ''))
+        for day in week_days for t in day['tasks']
+        if not t.get('is_break') and t.get('topic_id')
+    ))
+    sections_by_topic = {}
+    for tid in all_topic_ids:
+        if tid:
+            secs = list(db['sections'].find({'topic_id': tid, 'user_email': user_email}).sort('order', 1))
+            for s in secs:
+                fix_id(s)
+            sections_by_topic[tid] = secs
+    for day in week_days:
+        for t in day['tasks']:
+            if not t.get('is_break') and t.get('topic_id'):
+                tid = str(t['topic_id'])
+                secs = sections_by_topic.get(tid, [])
+                _incomplete_secs = [s for s in secs if not s.get('completed')]
+                pinned_id = str(t.get('pinned_section_id', ''))
+                if pinned_id == '__done__':
+                    t['current_section'] = _incomplete_secs[0] if _incomplete_secs else None
+                elif pinned_id:
+                    _pinned_sec = next((s for s in secs if s['id'] == pinned_id), None)
+                    if _pinned_sec and not _pinned_sec.get('completed'):
+                        t['current_section'] = _pinned_sec
+                    else:
+                        t['current_section'] = _incomplete_secs[0] if _incomplete_secs else None
+                else:
+                    t['current_section'] = _incomplete_secs[0] if _incomplete_secs else None
+                t['all_sections_complete'] = bool(secs) and not bool(_incomplete_secs)
+
+    all_subjects = list(db['subjects'].find({'user_email': user_email}).sort('exam_date', 1))
+    subject_remaining = []
+    for s in all_subjects:
+        sid = str(s['_id'])
+        pending_topics = list(db['topics'].find({'subject_id': sid, 'user_email': user_email, 'status': 'pending'}))
+        total_est_min = sum(int(t.get('estimated_hours', 0) * 60) for t in pending_topics)
+        completed_min = 0
+        for t in pending_topics:
+            for ct in db['scheduled_tasks'].find({'topic_id': str(t['_id']), 'user_email': user_email, 'completed': True}):
+                completed_min += ct.get('actual_minutes', ct.get('duration_minutes', 0))
+        remaining_min = max(0, total_est_min - completed_min)
+        subject_remaining.append({
+            'name': s['name'],
+            'remaining_hours': round(remaining_min / 60, 1),
+            'exam_date': s.get('exam_date', ''),
+        })
+
     return render(request, 'schedule.html', {
         'user': user,
         'week_days': week_days,
         'today': today.isoformat(),
         'has_future_tasks': has_future_tasks,
+        'subject_remaining': subject_remaining,
     })
 
 
@@ -392,8 +508,8 @@ def generate_week_schedule(user_email, db, user, single_day=False, use_ai=False)
 
     study_start = user.get('study_start_time', '18:00')
     study_end = user.get('study_end_time', '22:00')
-    session_dur = user.get('session_duration', 25)
-    break_dur = user.get('break_duration', 5)
+    session_dur = int(user.get('session_duration', 25))
+    break_dur = int(user.get('break_duration', 5))
 
     sh, sm = map(int, study_start.split(':'))
     eh, em = map(int, study_end.split(':'))
@@ -434,6 +550,8 @@ def generate_week_schedule(user_email, db, user, single_day=False, use_ai=False)
         total_min = int(t.get('estimated_hours', 1) * 60)
         t['remaining_minutes'] = max(0, total_min - completed_min)
 
+    subject_ratios, subject_counts, global_avg = {}, {}, 1.0
+
     if use_ai:
         completed_tasks_all = list(db['scheduled_tasks'].find({
             'user_email': user_email, 'completed': True, 'is_break': {'$ne': True}
@@ -448,29 +566,63 @@ def generate_week_schedule(user_email, db, user, single_day=False, use_ai=False)
             )
         topics = ai_prioritize_topics(topics, completed_tasks_all, recent_remarks, subject_ratios, subject_counts, global_avg)
         for t in topics:
-            t['remaining_minutes'] = max(0, t.get('ai_estimated_minutes', t.get('estimated_hours', 1) * 60) - t.get('already_done_minutes', 0))
+            already_done = t.get('already_done_minutes', 0)
+            ai_total = t.get('ai_estimated_minutes', int(t.get('estimated_hours', 1) * 60))
+            t['remaining_minutes'] = max(0, ai_total - already_done)
         topics = [t for t in topics if t['remaining_minutes'] > 0]
+        score_key = 'ai_priority_score'
     else:
         topics = [t for t in topics if t['remaining_minutes'] > 0]
         topics.sort(key=lambda x: x['priority_score'], reverse=True)
+        score_key = 'priority_score'
 
-    task_queue = []
-    for topic in topics:
-        remaining = topic['remaining_minutes']
-        while remaining > 0:
-            chunk = min(remaining, session_dur)
-            task_queue.append({
-                'topic_id': topic['id'],
-                'topic_name': topic['name'],
-                'subject_name': topic['subject_name'],
-                'subject_id': topic['subject_id'],
-                'duration': chunk,
-                'priority_score': topic['priority_score'],
-            })
-            remaining -= chunk
+    if not topics:
+        return
+
+    # Group topics by subject, preserving priority order within each subject
+    subject_order = []
+    subject_topics = {}
+    for t in topics:
+        sid = t['subject_id']
+        if sid not in subject_topics:
+            subject_order.append(sid)
+            subject_topics[sid] = []
+        subject_topics[sid].append(t)
+
+    # Compute subject-level priority score (max of its topics)
+    subject_scores = {}
+    for sid in subject_order:
+        subject_scores[sid] = max(max(t.get(score_key, 1), 1) for t in subject_topics[sid])
+
+    topic_remaining = {t['id']: t['remaining_minutes'] for t in topics}
+
+    day_window = end_min_global - start_min_global
+    total_remaining = sum(t['remaining_minutes'] for t in topics)
+    if single_day or num_days == 1:
+        daily_cap = day_window
+    else:
+        daily_cap = max(session_dur * 2, round(total_remaining / num_days))
+    daily_cap = min(daily_cap, day_window)
+
+    # Build day-to-subject assignment: each day gets ONE subject
+    # Assign days proportionally to subject priority scores
+    # Higher priority subject gets more days
+    total_score = sum(subject_scores.values()) or 1
+    day_assignments = []
+    subject_day_counts = {sid: max(1, round(num_days * subject_scores[sid] / total_score)) for sid in subject_order}
+
+    # Fill day_assignments list respecting counts, cycling through subjects
+    sid_cycle = []
+    for sid in subject_order:
+        sid_cycle.extend([sid] * subject_day_counts[sid])
+    # Trim or extend to exactly num_days
+    while len(sid_cycle) < num_days:
+        sid_cycle.append(subject_order[len(sid_cycle) % len(subject_order)])
+    sid_cycle = sid_cycle[:num_days]
+    day_assignments = sid_cycle
 
     for day_offset in range(num_days):
-        if not task_queue:
+        if not any(v > 0 for v in topic_remaining.values()):
             break
 
         d = (today + timedelta(days=day_offset)).isoformat()
@@ -479,73 +631,86 @@ def generate_week_schedule(user_email, db, user, single_day=False, use_ai=False)
             now_min = now.hour * 60 + now.minute
             if now_min >= end_min_global:
                 continue
-            last_task_end = start_min_global
-            for existing in db['scheduled_tasks'].find({'user_email': user_email, 'date': d}):
-                try:
-                    eh2, em2 = map(int, existing.get('end_time', '00:00').split(':'))
-                    last_task_end = max(last_task_end, eh2 * 60 + em2)
-                except Exception:
-                    pass
-            cur_min = max(start_min_global, now_min, last_task_end)
-            if cur_min >= end_min_global:
-                continue
+            cur_min = max(start_min_global, now_min)
         else:
             cur_min = start_min_global
 
-        end_min = end_min_global
-        first_in_day = True
+        if cur_min >= end_min_global:
+            continue
 
-        while cur_min < end_min and task_queue:
-            if not first_in_day:
-                b_end = cur_min + break_dur
-                if b_end >= end_min:
+        available_window = min(daily_cap, end_min_global - cur_min)
+        if available_window < session_dur:
+            continue
+
+        # Pick the assigned subject for this day; fallback to highest priority with remaining work
+        assigned_sid = day_assignments[day_offset]
+        if not any(topic_remaining[t['id']] > 0 for t in subject_topics.get(assigned_sid, [])):
+            # This subject is done, find next subject with remaining work
+            assigned_sid = next(
+                (sid for sid in subject_order if any(topic_remaining[t['id']] > 0 for t in subject_topics[sid])),
+                None
+            )
+        if assigned_sid is None:
+            break
+
+        day_topics = [t for t in subject_topics[assigned_sid] if topic_remaining[t['id']] > 0]
+        if not day_topics:
+            break
+
+        # Schedule session_dur chunks for each topic in this subject, one at a time
+        first_session = True
+        for t in day_topics:
+            if use_ai:
+                ratio = get_effective_ratio(t['subject_id'], subject_ratios, subject_counts, global_avg)
+                effective_session_dur = max(session_dur, min(round(session_dur * ratio), session_dur * 3))
+            else:
+                effective_session_dur = session_dur
+            while topic_remaining[t['id']] > 0 and cur_min < end_min_global:
+                if not first_session:
+                    b_end = cur_min + break_dur
+                    if b_end >= end_min_global:
+                        break
+                    db['scheduled_tasks'].insert_one({
+                        'user_email': user_email,
+                        'date': d,
+                        'topic_name': 'Break',
+                        'subject_name': '',
+                        'duration_minutes': break_dur,
+                        'start_time': f"{cur_min // 60:02d}:{cur_min % 60:02d}",
+                        'end_time': f"{b_end // 60:02d}:{b_end % 60:02d}",
+                        'is_break': True,
+                        'completed': False,
+                    })
+                    cur_min = b_end
+
+                chunk = min(effective_session_dur, topic_remaining[t['id']], end_min_global - cur_min)
+                if chunk < 5:
                     break
+
+                t_end = cur_min + chunk
                 db['scheduled_tasks'].insert_one({
                     'user_email': user_email,
                     'date': d,
-                    'topic_name': 'Break',
-                    'subject_name': '',
-                    'duration_minutes': break_dur,
+                    'topic_id': t['id'],
+                    'topic_name': t['name'],
+                    'subject_name': t['subject_name'],
+                    'subject_id': t['subject_id'],
+                    'duration_minutes': chunk,
                     'start_time': f"{cur_min // 60:02d}:{cur_min % 60:02d}",
-                    'end_time': f"{b_end // 60:02d}:{b_end % 60:02d}",
-                    'is_break': True,
+                    'end_time': f"{t_end // 60:02d}:{t_end % 60:02d}",
+                    'is_break': False,
                     'completed': False,
+                    'priority_score': t['priority_score'],
+                    'ai_generated': use_ai,
                 })
-                cur_min = b_end
 
-            available = end_min - cur_min
-            if available < 5:
+                topic_remaining[t['id']] = max(0, topic_remaining[t['id']] - chunk)
+                cur_min = t_end
+                first_session = False
+
+            if cur_min >= end_min_global:
                 break
 
-            task = task_queue[0]
-            duration = min(task['duration'], available)
-
-            if duration < 5:
-                break
-
-            t_end = cur_min + duration
-            db['scheduled_tasks'].insert_one({
-                'user_email': user_email,
-                'date': d,
-                'topic_id': task['topic_id'],
-                'topic_name': task['topic_name'],
-                'subject_name': task['subject_name'],
-                'subject_id': task['subject_id'],
-                'duration_minutes': duration,
-                'start_time': f"{cur_min // 60:02d}:{cur_min % 60:02d}",
-                'end_time': f"{t_end // 60:02d}:{t_end % 60:02d}",
-                'is_break': False,
-                'completed': False,
-                'priority_score': task['priority_score'],
-            })
-
-            if duration >= task['duration']:
-                task_queue.pop(0)
-            else:
-                task['duration'] -= duration
-
-            cur_min = t_end
-            first_in_day = False
 
 
 def complete_task(request):
@@ -556,11 +721,13 @@ def complete_task(request):
         return redirect('login')
 
     task_id = request.POST.get('task_id')
-    actual_min = request.POST.get('actual_minutes')
     redirect_to = request.POST.get('redirect_to', 'home')
+    continue_sec = request.POST.get('continue_section', '')
+    cur_sec_id = request.POST.get('current_section_id', '')
 
     db = get_db()
     task = db['scheduled_tasks'].find_one({'_id': ObjectId(task_id), 'user_email': user_email})
+    _ajax_resp = {'ok': True}
 
     if task and not task.get('completed'):
         now_dt = datetime.now()
@@ -569,20 +736,74 @@ def complete_task(request):
             task_start = task.get('start_time', '00:00')
             start_dt = datetime.strptime(task_date + ' ' + task_start, '%Y-%m-%d %H:%M')
             actual = max(1, int((now_dt - start_dt).total_seconds() / 60))
-            actual = min(actual, task.get('duration_minutes', 60) * 5)
         except Exception:
             actual = task.get('duration_minutes', 0)
+        update_data = {
+            'completed': True,
+            'completed_at': now_dt.isoformat(),
+            'actual_minutes': actual,
+        }
+        if cur_sec_id:
+            update_data['completed_section_id'] = cur_sec_id
+            try:
+                sec_doc = db['sections'].find_one({'_id': ObjectId(cur_sec_id)})
+                if sec_doc:
+                    update_data['completed_section_name'] = sec_doc.get('name', '')
+            except Exception:
+                pass
         db['scheduled_tasks'].update_one(
             {'_id': ObjectId(task_id)},
-            {'$set': {
-                'completed': True,
-                'completed_at': now_dt.isoformat(),
-                'actual_minutes': actual,
-            }}
+            {'$set': update_data}
         )
+
+        if cur_sec_id and task.get('topic_id'):
+            next_tasks = list(db['scheduled_tasks'].find({
+                'user_email': user_email,
+                'topic_id': task['topic_id'],
+                'completed': {'$ne': True},
+                'date': {'$gte': date.today().isoformat()},
+            }).sort([('date', 1), ('start_time', 1)]).limit(5))
+            if continue_sec == 'yes':
+                for nt in next_tasks:
+                    db['scheduled_tasks'].update_one(
+                        {'_id': nt['_id']},
+                        {'$set': {'pinned_section_id': cur_sec_id}}
+                    )
+            elif continue_sec == 'no':
+                try:
+                    db['sections'].update_one({'_id': ObjectId(cur_sec_id), 'user_email': user_email}, {'$set': {'completed': True}})
+                except Exception:
+                    pass
+                all_secs = list(db['sections'].find({'topic_id': task['topic_id'], 'user_email': user_email}).sort('order', 1))
+                sec_ids = [str(s['_id']) for s in all_secs]
+                try:
+                    cur_idx = sec_ids.index(cur_sec_id)
+                    next_sec_id = sec_ids[cur_idx + 1] if cur_idx + 1 < len(sec_ids) else None
+                except (ValueError, IndexError):
+                    next_sec_id = None
+                _incomplete = [s for s in all_secs if str(s['_id']) != cur_sec_id and not s.get('completed')]
+                if next_sec_id is None and _incomplete:
+                    next_sec_id = str(_incomplete[0]['_id'])
+                for nt in next_tasks:
+                    if next_sec_id:
+                        db['scheduled_tasks'].update_one({'_id': nt['_id']}, {'$set': {'pinned_section_id': next_sec_id}})
+                    else:
+                        db['scheduled_tasks'].update_one({'_id': nt['_id']}, {'$set': {'pinned_section_id': '__done__'}})
+                if next_sec_id:
+                    _ns_doc = db['sections'].find_one({'_id': ObjectId(next_sec_id)})
+                    _ajax_resp['next_section_id'] = next_sec_id
+                    _ajax_resp['next_section_name'] = _ns_doc.get('name', '') if _ns_doc else ''
+                    _ajax_resp['all_sections_complete'] = False
+                else:
+                    _ajax_resp['next_section_id'] = ''
+                    _ajax_resp['next_section_name'] = ''
+                    _ajax_resp['all_sections_complete'] = True
+                _ajax_resp['topic_id'] = str(task.get('topic_id', ''))
         points = 20 if task.get('date') == date.today().isoformat() else 10
         db['users'].update_one({'email': user_email}, {'$inc': {'points': points}})
         award_badges(user_email, db)
+    if request.POST.get('is_ajax') == '1':
+        return JsonResponse(_ajax_resp)
     return redirect(redirect_to)
 
 
@@ -660,3 +881,74 @@ def profile_view(request):
                 return render(request, 'profile.html', _ctx({'error': 'Incorrect current password.'}))
 
     return render(request, 'profile.html', _ctx())
+
+
+def history_view(request):
+    user_email = get_current_user(request)
+    if not user_email:
+        return redirect('login')
+
+    db = get_db()
+    user = db['users'].find_one({'email': user_email})
+
+    completed_tasks = list(db['scheduled_tasks'].find({
+        'user_email': user_email,
+        'completed': True,
+        'is_break': {'$ne': True},
+    }).sort([('date', -1), ('start_time', 1)]))
+    for t in completed_tasks:
+        fix_id(t)
+
+    days_map = {}
+    for t in completed_tasks:
+        d = t['date']
+        days_map.setdefault(d, []).append(t)
+
+    history_days = []
+    for d in sorted(days_map.keys(), reverse=True):
+        tasks = days_map[d]
+        total_min = sum(t.get('actual_minutes', t.get('duration_minutes', 0)) for t in tasks)
+        subjects = list(dict.fromkeys(t.get('subject_name', '') for t in tasks if t.get('subject_name')))
+        history_days.append({
+            'date': d,
+            'tasks': tasks,
+            'total_minutes': total_min,
+            'total_hours': round(total_min / 60, 1),
+            'subjects': subjects,
+            'task_count': len(tasks),
+        })
+
+    total_sessions = len(completed_tasks)
+    total_minutes = sum(t.get('actual_minutes', t.get('duration_minutes', 0)) for t in completed_tasks)
+
+    subject_map = {}
+    for t in completed_tasks:
+        sn = t.get('subject_name', '') or 'Unknown'
+        if sn not in subject_map:
+            subject_map[sn] = {'sessions': 0, 'minutes': 0}
+        subject_map[sn]['sessions'] += 1
+        subject_map[sn]['minutes'] += t.get('actual_minutes', t.get('duration_minutes', 0))
+
+    max_min = max((v['minutes'] for v in subject_map.values()), default=1)
+    subject_stats = sorted(
+        [{'name': k, 'sessions': v['sessions'], 'minutes': v['minutes'],
+          'hours': round(v['minutes'] / 60, 1),
+          'pct': round(v['minutes'] / max_min * 100)}
+         for k, v in subject_map.items()],
+        key=lambda x: x['minutes'], reverse=True
+    )
+
+    return render(request, 'history.html', {
+        'user': user,
+        'history_days': history_days,
+        'total_sessions': total_sessions,
+        'total_minutes': total_minutes,
+        'total_hours': round(total_minutes / 60, 1),
+        'subject_stats': subject_stats,
+        'study_days': len(history_days),
+        'chart_daily_labels': json.dumps([d['date'][5:] for d in list(reversed(history_days[:14]))]),
+        'chart_daily_hours': json.dumps([d['total_hours'] for d in list(reversed(history_days[:14]))]),
+        'chart_subject_labels': json.dumps([s['name'] for s in subject_stats]),
+        'chart_subject_hours': json.dumps([s['hours'] for s in subject_stats]),
+    })
+

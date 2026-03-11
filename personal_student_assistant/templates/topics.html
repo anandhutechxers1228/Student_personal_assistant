@@ -126,7 +126,7 @@
 
         .form-grid {
             display: grid;
-            grid-template-columns: 2fr 1fr 1fr 1fr 50px;
+            grid-template-columns: 2fr 1fr 1fr 1fr 1fr 50px;
             gap: 12px;
             align-items: end;
             width: 100%;
@@ -475,6 +475,170 @@
             color: var(--muted);
         }
 
+        .btn-sections-toggle {
+            background: #f0ebff;
+            color: #6f42c1;
+            border: 1px solid #c8b6ff;
+            padding: 4px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .btn-sections-toggle:hover {
+            background: #e2d9f3;
+        }
+
+        .sections-expand-row td {
+            padding: 0 !important;
+            background: #fafbff;
+        }
+
+        .topic-sections-panel {
+            padding: 14px 20px 16px;
+            border-top: 1px solid #e9ecef;
+        }
+
+        .topic-sections-header {
+            font-size: 12px;
+            font-weight: 700;
+            color: #6f42c1;
+            text-transform: uppercase;
+            letter-spacing: .5px;
+            margin-bottom: 10px;
+        }
+
+        .sec-drag-list {
+            margin-bottom: 10px;
+        }
+
+        .sec-drag-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 7px 10px;
+            border: 1px solid #e2d9f3;
+            border-radius: 8px;
+            margin-bottom: 6px;
+            background: white;
+            cursor: grab;
+            font-size: 13px;
+        }
+
+        .sec-drag-row:active { cursor: grabbing; }
+
+        .sec-drag-row.dragging { opacity: 0.4; }
+
+        .sec-drag-handle {
+            color: var(--muted);
+            font-size: 15px;
+            user-select: none;
+            flex-shrink: 0;
+        }
+
+        .sec-priority-num {
+            background: #6f42c1;
+            color: white;
+            font-size: 10px;
+            font-weight: 700;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .sec-drag-name {
+            flex: 1;
+            font-weight: 500;
+            color: var(--text);
+        }
+
+        .sec-chip-edit {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 13px;
+            padding: 2px 4px;
+            opacity: 0.6;
+            border-radius: 4px;
+        }
+        .sec-chip-edit:hover { opacity: 1; background: #f0ebff; }
+
+        .sec-chip-del {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 13px;
+            color: var(--danger);
+            padding: 2px 4px;
+            opacity: 0.55;
+            border-radius: 4px;
+        }
+        .sec-chip-del:hover { opacity: 1; background: #fff0f0; }
+
+        .sec-order-save-bar {
+            display: none;
+            align-items: center;
+            gap: 10px;
+            background: #f0ebff;
+            border: 1px solid #c8b6ff;
+            border-radius: 7px;
+            padding: 7px 12px;
+            margin-bottom: 10px;
+            font-size: 12px;
+            color: #3d1d8c;
+        }
+
+        .sec-order-save-bar button {
+            background: #6f42c1;
+            color: white;
+            border: none;
+            padding: 4px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .add-section-inline {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin-top: 6px;
+        }
+
+        .sec-inline-input {
+            padding: 6px 10px;
+            border: 1px solid #ced4da;
+            border-radius: 7px;
+            font-size: 13px;
+            flex: 1;
+            min-width: 0;
+        }
+        .sec-inline-input:focus {
+            outline: none;
+            border-color: #6f42c1;
+        }
+
+        .sec-inline-btn {
+            background: #6f42c1;
+            color: white;
+            border: none;
+            padding: 6px 14px;
+            border-radius: 7px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        .sec-inline-btn:hover { background: #5a32a3; }
+
         @media (max-width: 1024px) {
             .form-grid {
                 grid-template-columns: 1fr 1fr;
@@ -608,11 +772,10 @@
             <div class="card">
                 <div class="card-header">
                     <h2>Topics</h2>
-                    <span class="sort-info">Sorted by priority (highest first)</span>
                 </div>
                 <div class="card-body">
                     {% if topics %}
-                    
+
                     <div class="table-container">
                         <table class="topics-table">
                             <thead>
@@ -654,11 +817,55 @@
                                                 <button type="submit" class="btn-toggle {% if topic.status == 'completed' %}mark-undone{% else %}mark-done{% endif %}">{% if topic.status == 'completed' %}Undo{% else %}Done{% endif %}</button>
                                             </form>
                                             <button type="button" class="btn-edit" onclick="openEdit('{{ topic.id }}','{{ topic.name }}','{{ topic.difficulty }}','{{ topic.self_strength }}','{{ topic.estimated_hours }}')">Edit</button>
+                                            <button type="button" class="btn-sections-toggle" onclick="toggleSections('sec-{{ topic.id }}')">Sections{% if topic.sections %} ({{ topic.sections|length }}){% endif %}</button>
                                             <form method="POST" onsubmit="return confirm('Delete this topic?')">
                                                 {% csrf_token %}
                                                 <input type="hidden" name="action" value="delete">
                                                 <input type="hidden" name="topic_id" value="{{ topic.id }}">
                                                 <button type="submit" class="btn-delete">Delete</button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr class="sections-expand-row" id="sec-{{ topic.id }}" style="display:none;">
+                                    <td colspan="8">
+                                        <div class="topic-sections-panel">
+                                            <div class="topic-sections-header">Sections — drag to set priority</div>
+                                            <div class="sec-drag-list" id="sec-list-{{ topic.id }}">
+                                                {% for section in topic.sections %}
+                                                <div class="sec-drag-row" data-id="{{ section.id }}" draggable="true">
+                                                    <span class="sec-drag-handle">⠿</span>
+                                                    <span class="sec-priority-num">{{ forloop.counter }}</span>
+                                                    <span class="sec-drag-name">{{ section.name }}</span>
+                                                    <button type="button" class="sec-chip-edit" onclick="openSecEdit('{{ section.id }}','{{ section.name }}','{{ topic.id }}')">✏️</button>
+                                                    <form method="POST" style="display:inline;" onsubmit="return confirm('Delete section?')">
+                                                        {% csrf_token %}
+                                                        <input type="hidden" name="action" value="delete_section">
+                                                        <input type="hidden" name="section_id" value="{{ section.id }}">
+                                                        <button type="submit" class="sec-chip-del">✕</button>
+                                                    </form>
+                                                </div>
+                                                {% empty %}
+                                                <div style="color:var(--muted);font-size:13px;padding:4px 0;">No sections yet. Add below.</div>
+                                                {% endfor %}
+                                            </div>
+                                            <div class="sec-order-save-bar" id="sec-bar-{{ topic.id }}">
+                                                <span>Order changed.</span>
+                                                <button type="button" onclick="saveSectionOrder('{{ topic.id }}')">Save Priority</button>
+                                                <button type="button" style="background:none;border:none;color:#6f42c1;cursor:pointer;" onclick="document.getElementById('sec-bar-{{ topic.id }}').style.display='none'">✕</button>
+                                            </div>
+                                            <form method="POST" id="sec-order-form-{{ topic.id }}" style="display:none;">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="action" value="reorder_sections">
+                                                <input type="hidden" name="topic_id" value="{{ topic.id }}">
+                                                <input type="hidden" name="order" id="sec-order-input-{{ topic.id }}">
+                                            </form>
+                                            <form method="POST" class="add-section-inline">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="action" value="add_section">
+                                                <input type="hidden" name="topic_id" value="{{ topic.id }}">
+                                                <input type="text" name="section_name" placeholder="New section name..." required class="sec-inline-input">
+                                                <button type="submit" class="sec-inline-btn">+ Add</button>
                                             </form>
                                         </div>
                                     </td>
@@ -696,7 +903,7 @@
                                 </div>
                             </div>
 
-                            <div class="action-cell" style="margin-top: 8px;">
+                            <div class="action-cell" style="margin-top: 8px; flex-wrap: wrap;">
                                 <form method="POST" style="flex:1;">
                                     {% csrf_token %}
                                     <input type="hidden" name="action" value="toggle_status">
@@ -704,11 +911,44 @@
                                     <button type="submit" style="width:100%;" class="btn-toggle {% if topic.status == 'completed' %}mark-undone{% else %}mark-done{% endif %}">{% if topic.status == 'completed' %}Undo{% else %}Mark Done{% endif %}</button>
                                 </form>
                                 <button type="button" class="btn-edit" onclick="openEdit('{{ topic.id }}','{{ topic.name }}','{{ topic.difficulty }}','{{ topic.self_strength }}','{{ topic.estimated_hours }}')">Edit</button>
+                                <button type="button" class="btn-sections-toggle" onclick="toggleSections('mob-sec-{{ topic.id }}')">{% if topic.sections %} ({{ topic.sections|length }}){% endif %}</button>
                                 <form method="POST" onsubmit="return confirm('Delete this topic?')">
                                     {% csrf_token %}
                                     <input type="hidden" name="action" value="delete">
                                     <input type="hidden" name="topic_id" value="{{ topic.id }}">
                                     <button type="submit" class="btn-delete">Delete</button>
+                                </form>
+                            </div>
+                            <div class="topic-sections-panel" id="mob-sec-{{ topic.id }}" style="display:none;margin-top:10px;">
+                                <div class="topic-sections-header">📋 Sections</div>
+                                <div class="sec-drag-list" id="sec-list-mob-{{ topic.id }}">
+                                    {% for section in topic.sections %}
+                                    <div class="sec-drag-row" data-id="{{ section.id }}" draggable="true">
+                                        <span class="sec-drag-handle">⠿</span>
+                                        <span class="sec-priority-num">{{ forloop.counter }}</span>
+                                        <span class="sec-drag-name">{{ section.name }}</span>
+                                        <button type="button" class="sec-chip-edit" onclick="openSecEdit('{{ section.id }}','{{ section.name }}','{{ topic.id }}')">✏️</button>
+                                        <form method="POST" style="display:inline;" onsubmit="return confirm('Delete?')">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="action" value="delete_section">
+                                            <input type="hidden" name="section_id" value="{{ section.id }}">
+                                            <button type="submit" class="sec-chip-del">✕</button>
+                                        </form>
+                                    </div>
+                                    {% empty %}
+                                    <div style="color:var(--muted);font-size:13px;padding:4px 0;">No sections yet.</div>
+                                    {% endfor %}
+                                </div>
+                                <div class="sec-order-save-bar" id="sec-bar-mob-{{ topic.id }}">
+                                    <span>Order changed.</span>
+                                    <button type="button" onclick="saveSectionOrder('{{ topic.id }}')">Save Priority</button>
+                                </div>
+                                <form method="POST" class="add-section-inline" style="margin-top:8px;">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="add_section">
+                                    <input type="hidden" name="topic_id" value="{{ topic.id }}">
+                                    <input type="text" name="section_name" placeholder="Add section..." required class="sec-inline-input">
+                                    <button type="submit" class="sec-inline-btn">+ Add</button>
                                 </form>
                             </div>
                         </div>
@@ -722,7 +962,6 @@
                     {% endif %}
                 </div>
             </div>
-        </div>
 
     <div class="modal-overlay" id="editModal">
         <div class="modal">
@@ -756,7 +995,7 @@
                             <option value="5">5 - Very Strong</option>
                         </select>
                     </div>
-                    <div class="form-group full">
+                    <div class="form-group">
                         <label>Estimated Hours</label>
                         <input type="number" name="estimated_hours" id="edit_hours" step="0.5" min="0.5">
                     </div>
@@ -764,6 +1003,25 @@
                 <div class="modal-actions">
                     <button type="button" class="btn-cancel" onclick="closeEdit()">Cancel</button>
                     <button type="submit" class="btn-save">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="sectionEditModal">
+        <div class="modal">
+            <h3>Edit Section</h3>
+            <form method="POST" id="sectionEditForm">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="edit_section">
+                <input type="hidden" name="section_id" id="edit_section_modal_id">
+                <div class="form-group" style="margin-bottom:20px;">
+                    <label>Section Name</label>
+                    <input type="text" name="section_name" id="edit_section_name" required>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-cancel" onclick="closeSectionEdit()">Cancel</button>
+                    <button type="submit" class="btn-save">Save</button>
                 </div>
             </form>
         </div>
@@ -795,6 +1053,23 @@
             if (e.target === this) closeEdit();
         });
 
+        function openSecEdit(secId, secName) {
+            document.getElementById('edit_section_modal_id').value = secId;
+            document.getElementById('edit_section_name').value = secName;
+            document.getElementById('sectionEditModal').classList.add('open');
+        }
+        function closeSectionEdit() {
+            document.getElementById('sectionEditModal').classList.remove('open');
+        }
+        document.getElementById('sectionEditModal').addEventListener('click', function(e) {
+            if (e.target === this) closeSectionEdit();
+        });
+
+        function toggleSections(rowId) {
+            var row = document.getElementById(rowId);
+            if (row) row.style.display = row.style.display === 'none' ? '' : 'none';
+        }
+
         function toggleCard(bodyId, iconId) {
             if (window.innerWidth <= 768) {
                 var body = document.getElementById(bodyId);
@@ -803,12 +1078,62 @@
                 icon.classList.toggle('open');
             }
         }
-        
+
         window.addEventListener('resize', function() {
             if (window.innerWidth > 768) {
                 document.getElementById('add-topic-body').classList.remove('open');
                 document.getElementById('add-topic-icon').classList.remove('open');
             }
+        });
+
+        // Section drag-drop ordering
+        function initSecDrag(listId, barId, topicId) {
+            var list = document.getElementById(listId);
+            if (!list) return;
+            var dragSrc = null;
+            list.querySelectorAll('.sec-drag-row').forEach(function(row) {
+                row.addEventListener('dragstart', function(e) {
+                    dragSrc = row;
+                    e.dataTransfer.effectAllowed = 'move';
+                    setTimeout(function() { row.style.opacity = '0.4'; }, 0);
+                });
+                row.addEventListener('dragend', function() {
+                    row.style.opacity = '';
+                    dragSrc = null;
+                });
+                row.addEventListener('dragover', function(e) { e.preventDefault(); });
+                row.addEventListener('drop', function(e) {
+                    e.preventDefault();
+                    if (dragSrc && dragSrc !== row) {
+                        var parent = row.parentNode;
+                        var si = Array.from(parent.children).indexOf(dragSrc);
+                        var ti = Array.from(parent.children).indexOf(row);
+                        if (si < ti) parent.insertBefore(dragSrc, row.nextSibling);
+                        else parent.insertBefore(dragSrc, row);
+                        // Renumber priority badges
+                        parent.querySelectorAll('.sec-priority-num').forEach(function(n, i) {
+                            n.textContent = i + 1;
+                        });
+                        var bar = document.getElementById(barId);
+                        if (bar) bar.style.display = 'flex';
+                    }
+                });
+            });
+        }
+
+        function saveSectionOrder(topicId) {
+            var ids = Array.from(
+                document.querySelectorAll('#sec-list-' + topicId + ' .sec-drag-row')
+            ).map(function(r) { return r.dataset.id; });
+            document.getElementById('sec-order-input-' + topicId).value = JSON.stringify(ids);
+            document.getElementById('sec-order-form-' + topicId).submit();
+        }
+
+        // Init drag for every topic's section list
+        document.querySelectorAll('.sec-drag-list').forEach(function(list) {
+            var topicId = list.id.replace('sec-list-', '').replace('mob-', '');
+            var barId = list.id.replace('sec-list-', 'sec-bar-');
+            initSecDrag(list.id, barId, topicId);
         });
     </script>
 {% endblock %}

@@ -1,0 +1,443 @@
+{% extends 'base.html' %}
+
+{% block title %}Study History & Reports{% endblock %}
+
+{% block extra_css %}
+        .content {
+            padding: 28px 32px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,.07);
+            margin-bottom: 24px;
+        }
+
+        .card-header {
+            padding: 18px 22px 14px;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-header h2 {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--primary-d);
+            margin: 0;
+        }
+
+        .card-body {
+            padding: 20px 22px;
+        }
+
+        /* Stats row */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-box {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,.07);
+            padding: 20px;
+            text-align: center;
+        }
+
+        .stat-val {
+            font-size: 32px;
+            font-weight: 800;
+            color: var(--primary-d);
+            line-height: 1;
+            margin-bottom: 6px;
+        }
+
+        .stat-lbl {
+            font-size: 12px;
+            color: var(--muted);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: .5px;
+        }
+
+        /* Subject bars */
+        .subj-bar-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .subj-bar-name {
+            width: 140px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            flex-shrink: 0;
+        }
+
+        .subj-bar-track {
+            flex: 1;
+            height: 10px;
+            background: #f0f4f8;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        .subj-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), #6f42c1);
+            border-radius: 5px;
+        }
+
+        .subj-bar-meta {
+            font-size: 12px;
+            color: var(--muted);
+            white-space: nowrap;
+            width: 90px;
+            text-align: right;
+            flex-shrink: 0;
+        }
+
+        /* History days */
+        .history-day {
+            border: 1px solid #e9ecef;
+            border-radius: 10px;
+            margin-bottom: 12px;
+            overflow: hidden;
+        }
+
+        .history-day-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            background: #f8f9fa;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .history-day-header:hover {
+            background: var(--primary-l);
+        }
+
+        .hd-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .hd-date {
+            font-weight: 700;
+            font-size: 14px;
+            color: var(--primary-d);
+        }
+
+        .hd-subjects {
+            font-size: 12px;
+            color: var(--muted);
+        }
+
+        .hd-right {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .hd-stat {
+            text-align: center;
+        }
+
+        .hd-stat-val {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .hd-stat-lbl {
+            font-size: 10px;
+            color: var(--muted);
+        }
+
+        .hd-expand-icon {
+            color: var(--muted);
+            font-size: 13px;
+            transition: transform .2s;
+        }
+
+        .hd-expand-icon.open { transform: rotate(180deg); }
+
+        .history-day-body {
+            display: none;
+            padding: 0 16px 12px;
+        }
+
+        .history-day-body.open { display: block; }
+
+        .session-row {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 9px 0;
+            border-bottom: 1px solid #f5f5f5;
+            font-size: 13px;
+        }
+
+        .session-row:last-child { border-bottom: none; }
+
+        .sr-time {
+            color: var(--muted);
+            font-size: 11px;
+            width: 90px;
+            flex-shrink: 0;
+        }
+
+        .sr-subject {
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--primary);
+            text-transform: uppercase;
+            width: 80px;
+            flex-shrink: 0;
+        }
+
+        .sr-topic {
+            flex: 1;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .sr-dur {
+            font-size: 12px;
+            color: var(--muted);
+            white-space: nowrap;
+        }
+
+        .sr-actual {
+            font-size: 12px;
+            color: var(--success);
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .empty-history {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--muted);
+        }
+
+        .empty-history p {
+            font-size: 15px;
+            margin-bottom: 8px;
+        }
+
+        @media (max-width: 1024px) {
+            .stats-row { grid-template-columns: 1fr 1fr; }
+        }
+
+        @media (max-width: 768px) {
+            .content { padding: 16px; }
+            .stats-row { grid-template-columns: 1fr 1fr; gap: 10px; }
+            .stat-val { font-size: 26px; }
+            .subj-bar-name { width: 90px; font-size: 12px; }
+            .sr-subject { width: 60px; }
+            .hd-right { gap: 10px; }
+            .chart-analytics-grid { grid-template-columns: 1fr !important; }
+            #dailyChart, #subjectPieChart { max-width: 100% !important; height: auto !important; }
+        }
+{% endblock %}
+
+{% block content %}
+        <div class="topbar">
+            <h1>History & Reports</h1>
+            <a href="/logout/" class="btn-logout">Logout</a>
+        </div>
+        <div class="content">
+
+            <!-- Summary stats -->
+            <div class="stats-row">
+                <div class="stat-box">
+                    <div class="stat-val">{{ total_sessions }}</div>
+                    <div class="stat-lbl">Sessions Done</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-val">{{ total_hours }}h</div>
+                    <div class="stat-lbl">Total Study</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-val">{{ study_days }}</div>
+                    <div class="stat-lbl">Study Days</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-val">{{ subject_stats|length }}</div>
+                    <div class="stat-lbl">Subjects Covered</div>
+                </div>
+            </div>
+
+            <!-- Study Analytics Charts -->
+            {% if history_days %}
+            <div class="card">
+                <div class="card-header">
+                    <h2>Study Analytics</h2>
+                </div>
+                <div class="card-body">
+                    <div class="chart-analytics-grid" style="display:grid;grid-template-columns:2fr 1fr;gap:28px;align-items:center;overflow:hidden;max-width:100%;">
+                        <div>
+                            <div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px;">Daily Study Hours (last 14 days)</div>
+                            <canvas id="dailyChart" height="120"></canvas>
+                        </div>
+                        <div>
+                            <div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px;">Time by Subject</div>
+                            <canvas id="subjectPieChart" height="160"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Per-subject breakdown -->
+            {% if subject_stats %}
+            <div class="card">
+                <div class="card-header">
+                    <h2>Time by Subject</h2>
+                </div>
+                <div class="card-body">
+                    {% for s in subject_stats %}
+                    <div class="subj-bar-row">
+                        <div class="subj-bar-name" title="{{ s.name }}">{{ s.name }}</div>
+                        <div class="subj-bar-track">
+                            <div class="subj-bar-fill" style="width:{{ s.pct }}%"></div>
+                        </div>
+                        <div class="subj-bar-meta">{{ s.hours }}h · {{ s.sessions }} sessions</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Day-by-day history -->
+            <div class="card">
+                <div class="card-header">
+                    <h2>Session History</h2>
+                </div>
+                <div class="card-body" style="padding-bottom:8px;">
+                    {% if history_days %}
+                    {% for day in history_days %}
+                    <div class="history-day">
+                        <div class="history-day-header" onclick="toggleDay('day-{{ forloop.counter }}')">
+                            <div class="hd-left">
+                                <div class="hd-date">{{ day.date }}</div>
+                                <div class="hd-subjects">{{ day.subjects|join:", " }}</div>
+                            </div>
+                            <div class="hd-right">
+                                <div class="hd-stat">
+                                    <div class="hd-stat-val">{{ day.task_count }}</div>
+                                    <div class="hd-stat-lbl">sessions</div>
+                                </div>
+                                <div class="hd-stat">
+                                    <div class="hd-stat-val">{{ day.total_hours }}h</div>
+                                    <div class="hd-stat-lbl">studied</div>
+                                </div>
+                                <span class="hd-expand-icon" id="icon-day-{{ forloop.counter }}">▼</span>
+                            </div>
+                        </div>
+                        <div class="history-day-body" id="day-{{ forloop.counter }}">
+                            {% for task in day.tasks %}
+                            <div class="session-row">
+                                <span class="sr-time">{{ task.start_time }}–{{ task.end_time }}</span>
+                                <span class="sr-subject">{{ task.subject_name }}</span>
+                                <span class="sr-topic">{{ task.topic_name }}</span>
+                                <span class="sr-dur">{{ task.duration_minutes }}min planned</span>
+                                {% if task.actual_minutes %}
+                                <span class="sr-actual">{{ task.actual_minutes }}min actual</span>
+                                {% endif %}
+                                {% if task.completed_section_name %}
+                                <span style="font-size:11px;color:#6f42c1;font-weight:600;">📋 {{ task.completed_section_name }}</span>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <div class="empty-history">
+                        <p>No completed sessions yet.</p>
+                        <span style="font-size:13px;">Complete some study sessions and they'll show up here.</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+    <script>
+        var dailyLabels = {{ chart_daily_labels|safe }};
+        var dailyHours = {{ chart_daily_hours|safe }};
+        var subjectLabels = {{ chart_subject_labels|safe }};
+        var subjectHours = {{ chart_subject_hours|safe }};
+
+        if (document.getElementById('dailyChart')) {
+            new Chart(document.getElementById('dailyChart'), {
+                type: 'bar',
+                data: {
+                    labels: dailyLabels,
+                    datasets: [{
+                        label: 'Hours',
+                        data: dailyHours,
+                        backgroundColor: 'rgba(0,86,179,0.75)',
+                        borderRadius: 5,
+                        borderSkipped: false,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true, ticks: { font: { size: 11 } } },
+                        x: { ticks: { font: { size: 11 } } }
+                    }
+                }
+            });
+        }
+
+        var pieColors = ['#007BFF','#6f42c1','#28a745','#fd7e14','#dc3545','#17a2b8','#e83e8c','#6c757d','#20c997','#ffc107'];
+        if (document.getElementById('subjectPieChart')) {
+            new Chart(document.getElementById('subjectPieChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: subjectLabels,
+                    datasets: [{
+                        data: subjectHours,
+                        backgroundColor: pieColors.slice(0, subjectLabels.length),
+                        borderWidth: 2,
+                        borderColor: '#fff',
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { font: { size: 11 }, padding: 8 } },
+                        tooltip: { callbacks: { label: function(c) { return c.label + ': ' + c.parsed + 'h'; } } }
+                    }
+                }
+            });
+        }
+    </script>
+    <script>
+        function toggleDay(id) {
+            var body = document.getElementById(id);
+            var icon = document.getElementById('icon-' + id);
+            if (body) body.classList.toggle('open');
+            if (icon) icon.classList.toggle('open');
+        }
+    </script>
+{% endblock %}

@@ -85,6 +85,23 @@
             .session-item { flex-direction: column; align-items: flex-start; gap: 8px; }
             .session-time { width: auto; }
         }
+        .home-modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:500; align-items:center; justify-content:center; }
+        .home-modal-overlay.open { display:flex; }
+        .home-modal { background:white; border-radius:14px; padding:24px; width:340px; max-width:92vw; box-shadow:0 8px 32px rgba(0,0,0,.18); }
+        .hm-subject { font-size:11px; font-weight:700; color:var(--primary); text-transform:uppercase; letter-spacing:.5px; margin-bottom:4px; }
+        .hm-topic { font-size:18px; font-weight:700; color:var(--text); margin-bottom:4px; }
+        .hm-time { font-size:12px; color:var(--muted); margin-bottom:16px; }
+        .hm-section-box { background:#f0ebff; border:1px solid #c8b6ff; border-radius:10px; padding:12px 16px; margin-bottom:20px; }
+        .hm-section-label { font-size:10px; font-weight:700; color:#6f42c1; text-transform:uppercase; letter-spacing:.5px; margin-bottom:4px; }
+        .hm-section-name { font-size:15px; font-weight:600; color:#3d1d8c; }
+        .hm-q { font-size:14px; font-weight:600; color:var(--text); margin-bottom:14px; text-align:center; }
+        .hm-btn-row { display:flex; gap:10px; }
+        .hm-btn { flex:1; padding:10px; border:none; border-radius:8px; cursor:pointer; font-size:13px; font-weight:600; }
+        .hm-btn-purple { background:#6f42c1; color:white; }
+        .hm-btn-purple:hover { background:#5a32a3; }
+        .hm-btn-success { background:var(--success); color:white; }
+        .hm-btn-outline { background:white; color:var(--muted); border:1px solid #dee2e6; }
+        .hm-btn-outline:hover { background:#f8f9fa; }
 {% endblock %}
 
 {% block content %}
@@ -139,7 +156,23 @@
                     </div>
                     <div class="card-body collapsible-body" id="schedule-body">
                         {% for task in today_tasks %}
-                        <div class="session-item {% if task.is_break %}is-break{% endif %} {% if task.completed %}completed{% endif %}">
+                        <div class="session-item {% if task.is_break %}is-break{% endif %} {% if task.completed %}completed{% endif %}"
+                            {% if not task.is_break %}
+                            data-task-id="{{ task.id }}"
+                            data-section-name="{% if task.current_section %}{{ task.current_section.name }}{% endif %}"
+                            data-section-id="{% if task.current_section %}{{ task.current_section.id }}{% endif %}"
+                            data-all-sections-complete="{% if task.all_sections_complete %}1{% else %}0{% endif %}"
+                            data-end="{{ today }}T{{ task.end_time }}"
+                            data-start="{{ today }}T{{ task.start_time }}"
+                            data-subject="{{ task.subject_name }}"
+                            data-topic="{{ task.topic_name }}"
+                            data-time="{{ task.start_time }}-{{ task.end_time }}"
+                            data-dur="{{ task.duration_minutes }}"
+                            data-topic-id="{{ task.topic_id }}"
+                            data-completed-section="{{ task.completed_section_name }}"
+                            data-actual-min="{{ task.actual_minutes }}"
+                            data-completed-at="{{ task.completed_at }}"
+                            {% endif %}>
                             <div class="session-time">{{ task.start_time }} - {{ task.end_time }}</div>
                             <div class="session-info">
                                 {% if task.is_break %}
@@ -148,19 +181,14 @@
                                 {% else %}
                                 <div class="session-subject">{{ task.subject_name }}</div>
                                 <div class="session-topic">{{ task.topic_name }}</div>
-                                <div class="session-dur">{{ task.duration_minutes }} min</div>
+                                <div class="session-dur">{{ task.duration_minutes }} min{% if task.completed and task.completed_section_name %} · <span style="color:#6f42c1;font-weight:600;">{{ task.completed_section_name }}</span>{% endif %}</div>
                                 {% endif %}
                             </div>
                             {% if not task.is_break %}
                             {% if task.completed %}
-                            <span class="done-tag">✓ Done</span>
+                            <span class="done-tag" style="cursor:pointer;" onclick="homeViewDone(this.closest('[data-task-id]'))">✓ Done</span>
                             {% else %}
-                            <form method="POST" action="/complete-task/" style="display:inline">
-                                {% csrf_token %}
-                                <input type="hidden" name="task_id" value="{{ task.id }}">
-                                <input type="hidden" name="redirect_to" value="home">
-                                <button type="submit" class="btn-complete" data-end="{{ today }}T{{ task.end_time }}">Mark Done</button>
-                            </form>
+                            <button type="button" class="btn-complete" data-end="{{ today }}T{{ task.end_time }}" onclick="homeMarkDone(this.closest('[data-task-id]'))">Mark Done</button>
                             {% endif %}
                             {% endif %}
                         </div>
@@ -272,14 +300,150 @@
 
         </div>
 
+    <div class="home-modal-overlay" id="homeTaskModal">
+        <div class="home-modal">
+            <div class="hm-subject" id="hm-subject"></div>
+            <div class="hm-topic" id="hm-topic"></div>
+            <div class="hm-time" id="hm-time"></div>
+            <div id="hm-section-area"></div>
+            <div class="hm-q" id="hm-q"></div>
+            <div class="hm-btn-row" id="hm-btn-row"></div>
+            <div id="hm-done-detail" style="display:none;"></div>
+            <div style="margin-top:10px;text-align:center;">
+                <button class="hm-btn hm-btn-outline" style="width:100%;font-size:12px;" onclick="closeHomeModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <script>
+        var _hmCsrf = '{{ csrf_token }}';
+        var _hmTask = {};
+
+        function homeViewDone(el) {
+            if (!el) return;
+            document.getElementById('hm-subject').textContent = el.dataset.subject || '';
+            document.getElementById('hm-topic').textContent = el.dataset.topic || '';
+            document.getElementById('hm-time').textContent = el.dataset.time || '';
+            document.getElementById('hm-section-area').innerHTML = '';
+            document.getElementById('hm-q').textContent = '';
+            document.getElementById('hm-btn-row').innerHTML = '';
+            var detailDiv = document.getElementById('hm-done-detail');
+            var detailHtml = '';
+            var secName = el.dataset.completedSection;
+            if (secName) {
+                detailHtml += '<div class="hm-section-box"><div class="hm-section-label">📋 Section Covered</div><div class="hm-section-name">' + secName + '</div></div>';
+            }
+            detailHtml += '<div style="font-size:13px;color:var(--muted);line-height:2;">';
+            var actualMin = el.dataset.actualMin;
+            if (actualMin) detailHtml += '<div>⏱ Actual duration: <strong style="color:var(--text);">' + actualMin + ' min</strong></div>';
+            var completedAt = el.dataset.completedAt;
+            if (completedAt) detailHtml += '<div>✓ Completed at: <strong style="color:var(--text);">' + completedAt.replace('T', ' ').slice(0, 16) + '</strong></div>';
+            detailHtml += '</div>';
+            detailDiv.innerHTML = detailHtml;
+            detailDiv.style.display = '';
+            document.getElementById('homeTaskModal').classList.add('open');
+        }
+
+        function homeMarkDone(el) {
+            if (!el) return;
+            var btn = el.querySelector('.btn-complete');
+            if (btn && btn.disabled) return;
+            var startDate = new Date(el.dataset.start);
+            document.getElementById('hm-done-detail').style.display = 'none';
+            if (new Date() < startDate) return;
+            var secName = el.dataset.sectionName || '';
+            var secId = el.dataset.sectionId || '';
+            var allDone = el.dataset.allSectionsComplete === '1';
+            _hmTask = {
+                taskId: el.dataset.taskId,
+                el: el,
+                sectionName: secName,
+                sectionId: secId,
+            };
+            if (!secName || allDone) {
+                _hmAjax('', '');
+                return;
+            }
+            var subj = el.querySelector('.session-subject');
+            var topic = el.querySelector('.session-topic');
+            var st = el.querySelector('.session-time');
+            document.getElementById('hm-subject').textContent = subj ? subj.textContent : '';
+            document.getElementById('hm-topic').textContent = topic ? topic.textContent : '';
+            document.getElementById('hm-time').textContent = st ? st.textContent : '';
+            document.getElementById('hm-section-area').innerHTML = '<div class="hm-section-box"><div class="hm-section-label">📋 Focus Section</div><div class="hm-section-name">' + secName + '</div></div>';
+            document.getElementById('hm-q').textContent = 'Did you complete "' + secName + '"?';
+            document.getElementById('hm-btn-row').innerHTML = '<button class="hm-btn hm-btn-purple" onclick="homeSecAjax(\'yes\')">↩ Continue it</button><button class="hm-btn hm-btn-success" onclick="homeSecAjax(\'no\')">✓ Yes, completed</button>';
+            document.getElementById('homeTaskModal').classList.add('open');
+        }
+
+        function homeSecAjax(cont) {
+            closeHomeModal();
+            _hmAjax(cont, _hmTask.sectionId);
+        }
+
+        function _hmAjax(cont, secId) {
+            var fd = new FormData();
+            fd.append('csrfmiddlewaretoken', _hmCsrf);
+            fd.append('is_ajax', '1');
+            fd.append('task_id', _hmTask.taskId);
+            fd.append('redirect_to', 'home');
+            fd.append('continue_section', cont);
+            if (secId) fd.append('current_section_id', secId);
+            fetch('/complete-task/', {method:'POST', headers:{'X-CSRFToken': _hmCsrf}, body:fd})
+                .then(function(r){return r.json();}).then(function(d){
+                    if (d.ok) {
+                        var el = _hmTask.el;
+                        el.classList.add('completed');
+                        var btn = el.querySelector('.btn-complete');
+                        if (btn) {
+                            var span = document.createElement('span');
+                            span.className = 'done-tag';
+                            span.style.cursor = 'pointer';
+                            span.setAttribute('onclick', 'homeViewDone(this.closest(\'[data-task-id]\'))');
+                            span.textContent = '✓ Done';
+                            btn.parentNode.replaceChild(span, btn);
+                        }
+                        var sv = document.querySelector('.stat-card.green .stat-val');
+                        if (sv) {
+                            var pts = sv.textContent.split('/');
+                            if (pts.length === 2) {
+                                var nc = parseInt(pts[0]) + 1;
+                                sv.textContent = nc + '/' + pts[1];
+                                var bar = document.querySelector('.stat-card.green .progress-bar');
+                                if (bar) bar.style.width = Math.round(nc / parseInt(pts[1]) * 100) + '%';
+                            }
+                        }
+                        if (cont === 'no' && d.topic_id) {
+                            var nextSecId = d.next_section_id || '';
+                            var nextSecName = d.next_section_name || '';
+                            var allDone = d.all_sections_complete ? '1' : '0';
+                            document.querySelectorAll('[data-topic-id="' + d.topic_id + '"]').forEach(function(c) {
+                                if (!c.classList.contains('completed')) {
+                                    c.dataset.sectionId = nextSecId;
+                                    c.dataset.sectionName = nextSecName;
+                                    c.dataset.allSectionsComplete = allDone;
+                                }
+                            });
+                        }
+                    }
+                }).catch(function(){});
+        }
+
+        function closeHomeModal() {
+            document.getElementById('homeTaskModal').classList.remove('open');
+        }
+
+        document.getElementById('homeTaskModal').addEventListener('click', function(e) {
+            if (e.target === this) closeHomeModal();
+        });
+
         function updateDoneButtons() {
             var now = new Date();
             document.querySelectorAll('.btn-complete[data-end]').forEach(function(btn) {
-                var endDate = new Date(btn.getAttribute('data-end'));
-                if (now < endDate) {
+                var startDate = new Date(btn.closest('[data-start]') ? btn.closest('[data-start]').dataset.start : btn.getAttribute('data-end'));
+                if (now < startDate) {
                     btn.disabled = true;
-                    btn.title = 'Available after ' + endDate.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+                    btn.title = 'Available after session starts';
                 } else {
                     btn.disabled = false;
                     btn.title = '';
@@ -287,7 +451,7 @@
             });
         }
         updateDoneButtons();
-        setInterval(updateDoneButtons, 60000);
+        setInterval(updateDoneButtons, 10000);
 
         function toggleCard(bodyId, iconId) {
             if (window.innerWidth <= 768) {
