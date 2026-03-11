@@ -479,7 +479,7 @@ def schedule_view(request):
         completed_min = 0
         for t in pending_topics:
             for ct in db['scheduled_tasks'].find({'topic_id': str(t['_id']), 'user_email': user_email, 'completed': True}):
-                completed_min += ct.get('actual_minutes', ct.get('duration_minutes', 0))
+                completed_min += ct.get('duration_minutes', 0)
         remaining_min = max(0, total_est_min - completed_min)
         subject_remaining.append({
             'name': s['name'],
@@ -540,7 +540,7 @@ def generate_week_schedule(user_email, db, user, single_day=False, use_ai=False)
         subj = subjects_map.get(t['subject_id'], {})
         t['priority_score'] = get_priority_score(t, subj)
         completed_min = sum(
-            ct.get('actual_minutes', ct.get('duration_minutes', 0))
+            ct.get('duration_minutes', 0)
             for ct in db['scheduled_tasks'].find({
                 'topic_id': t['id'],
                 'user_email': user_email,
@@ -561,7 +561,7 @@ def generate_week_schedule(user_email, db, user, single_day=False, use_ai=False)
         global_avg = get_global_avg_ratio(subject_ratios)
         for t in topics:
             t['already_done_minutes'] = sum(
-                ct.get('actual_minutes', ct.get('duration_minutes', 0))
+                ct.get('duration_minutes', 0)
                 for ct in completed_tasks_all if ct.get('topic_id') == t['id']
             )
         topics = ai_prioritize_topics(topics, completed_tasks_all, recent_remarks, subject_ratios, subject_counts, global_avg)
@@ -629,16 +629,16 @@ def generate_week_schedule(user_email, db, user, single_day=False, use_ai=False)
 
         if day_offset == 0:
             now_min = now.hour * 60 + now.minute
-            if now_min >= end_min_global:
-                continue
             cur_min = max(start_min_global, now_min)
+            end_min_today = end_min_global
         else:
             cur_min = start_min_global
+            end_min_today = end_min_global
 
-        if cur_min >= end_min_global:
+        if cur_min >= end_min_today:
             continue
 
-        available_window = min(daily_cap, end_min_global - cur_min)
+        available_window = min(daily_cap, end_min_today - cur_min)
         if available_window < session_dur:
             continue
 
@@ -665,10 +665,10 @@ def generate_week_schedule(user_email, db, user, single_day=False, use_ai=False)
                 effective_session_dur = max(session_dur, min(round(session_dur * ratio), session_dur * 3))
             else:
                 effective_session_dur = session_dur
-            while topic_remaining[t['id']] > 0 and cur_min < end_min_global:
+            while topic_remaining[t['id']] > 0 and cur_min < end_min_today:
                 if not first_session:
                     b_end = cur_min + break_dur
-                    if b_end >= end_min_global:
+                    if b_end >= end_min_today:
                         break
                     db['scheduled_tasks'].insert_one({
                         'user_email': user_email,
@@ -683,7 +683,7 @@ def generate_week_schedule(user_email, db, user, single_day=False, use_ai=False)
                     })
                     cur_min = b_end
 
-                chunk = min(effective_session_dur, topic_remaining[t['id']], end_min_global - cur_min)
+                chunk = min(effective_session_dur, topic_remaining[t['id']], end_min_today - cur_min)
                 if chunk < 5:
                     break
 
@@ -708,7 +708,7 @@ def generate_week_schedule(user_email, db, user, single_day=False, use_ai=False)
                 cur_min = t_end
                 first_session = False
 
-            if cur_min >= end_min_global:
+            if cur_min >= end_min_today:
                 break
 
 
@@ -951,4 +951,29 @@ def history_view(request):
         'chart_subject_labels': json.dumps([s['name'] for s in subject_stats]),
         'chart_subject_hours': json.dumps([s['hours'] for s in subject_stats]),
     })
+
+
+def alarm_check_view(request):
+    user_email = get_current_user(request)
+    if not user_email:
+        return JsonResponse({'sessions': []})
+    db = get_db()
+    today_str = date.today().isoformat()
+    tasks = list(db['scheduled_tasks'].find({
+        'user_email': user_email,
+        'date': today_str,
+        'completed': {'$ne': True},
+        'is_break': {'$ne': True},
+    }))
+    sessions = []
+    for t in tasks:
+        fix_id(t)
+        sessions.append({
+            'id': t['id'],
+            'topic_name': t.get('topic_name', ''),
+            'subject_name': t.get('subject_name', ''),
+            'start_time': t.get('start_time', ''),
+            'end_time': t.get('end_time', ''),
+        })
+    return JsonResponse({'sessions': sessions})
 

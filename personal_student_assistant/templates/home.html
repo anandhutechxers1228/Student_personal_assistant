@@ -143,7 +143,7 @@
 
             {% if peak_window %}
             <div class="peak-banner">
-                🤖 AI detected your peak study time: <strong>{{ peak_window }}</strong> — high priority topics are scheduled around this window.
+                AI detected your peak study time: <strong>{{ peak_window }}</strong> — high priority topics are scheduled around this window.
             </div>
             {% endif %}
 
@@ -348,9 +348,9 @@
             if (!el) return;
             var btn = el.querySelector('.btn-complete');
             if (btn && btn.disabled) return;
-            var startDate = new Date(el.dataset.start);
+            var endDate = new Date(el.dataset.end);
             document.getElementById('hm-done-detail').style.display = 'none';
-            if (new Date() < startDate) return;
+            if (new Date() < endDate) return;
             var secName = el.dataset.sectionName || '';
             var secId = el.dataset.sectionId || '';
             var allDone = el.dataset.allSectionsComplete === '1';
@@ -440,10 +440,10 @@
         function updateDoneButtons() {
             var now = new Date();
             document.querySelectorAll('.btn-complete[data-end]').forEach(function(btn) {
-                var startDate = new Date(btn.closest('[data-start]') ? btn.closest('[data-start]').dataset.start : btn.getAttribute('data-end'));
-                if (now < startDate) {
+                var endDate = new Date(btn.getAttribute('data-end'));
+                if (now < endDate) {
                     btn.disabled = true;
-                    btn.title = 'Available after session starts';
+                    btn.title = 'Available after session ends';
                 } else {
                     btn.disabled = false;
                     btn.title = '';

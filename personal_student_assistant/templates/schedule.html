@@ -485,22 +485,22 @@
                 <form method="POST" onsubmit="return confirmGenerate(event)">
                     {% csrf_token %}
                     <input type="hidden" name="action" value="generate">
-                    <button type="submit" class="btn-primary">✨ Generate Week Schedule</button>
+                    <button type="submit" class="btn-primary">Generate Week Schedule</button>
                 </form>
                 <form method="POST" onsubmit="return confirmGenerate(event)">
                     {% csrf_token %}
                     <input type="hidden" name="action" value="generate_today">
-                    <button type="submit" class="btn-primary" style="background-color: var(--primary);">✨ Generate Today</button>
+                    <button type="submit" class="btn-primary" style="background-color: var(--primary);">Generate Today</button>
                 </form>
                 <form method="POST" onsubmit="return confirmGenerate(event)">
                     {% csrf_token %}
                     <input type="hidden" name="action" value="generate_ai">
-                    <button type="submit" class="btn-primary" style="background-color: #6f42c1;">🤖 Generate Week (AI)</button>
+                    <button type="submit" class="btn-primary" style="background-color: #6f42c1;">Generate Week (AI)</button>
                 </form>
                 <form method="POST" onsubmit="return confirmGenerate(event)">
                     {% csrf_token %}
                     <input type="hidden" name="action" value="generate_today_ai">
-                    <button type="submit" class="btn-primary" style="background-color: #6f42c1;">🤖 Generate Today (AI)</button>
+                    <button type="submit" class="btn-primary" style="background-color: #6f42c1;">Generate Today (AI)</button>
                 </form>
                 <form method="POST" onsubmit="return confirm('Clear all upcoming unfinished sessions?')">
                     {% csrf_token %}
@@ -657,9 +657,9 @@
                 return;
             }
 
-            var startDate = new Date(el.dataset.start);
+            var endDate = new Date(el.dataset.end);
             var now = new Date();
-            var isPast = now >= startDate;
+            var isPast = now >= endDate;
 
             currentTaskData = {
                 taskId: el.dataset.taskId,
@@ -784,12 +784,12 @@
 
         function updateMarkDoneButtons() {
             var now = new Date();
-            document.querySelectorAll('.session-block[data-start]').forEach(function(card) {
+            document.querySelectorAll('.session-block[data-end]').forEach(function(card) {
                 if (card.dataset.done === '1') return;
                 var md = card.querySelector('.sb-markdone');
                 if (!md) return;
-                var startDate = new Date(card.dataset.start);
-                if (now >= startDate) {
+                var endDate = new Date(card.dataset.end);
+                if (now >= endDate) {
                     md.style.background = 'var(--primary)';
                     md.style.color = 'white';
                     md.style.cursor = 'pointer';

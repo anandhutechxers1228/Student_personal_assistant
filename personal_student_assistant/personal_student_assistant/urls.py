@@ -1,4 +1,6 @@
 from django.urls import path
+from django.conf import settings
+from django.conf.urls.static import static
 from . import views
 
 urlpatterns = [
@@ -13,4 +15,5 @@ urlpatterns = [
     path('profile/', views.profile_view, name='profile'),
     path('daily-remark/', views.daily_remark_view, name='daily_remark'),
     path('history/', views.history_view, name='history'),
-]
+    path('alarm-check/', views.alarm_check_view, name='alarm_check'),
+] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

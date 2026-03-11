@@ -180,6 +180,63 @@
         }
 
         {% block extra_css %}{% endblock %}
+
+        .alarm-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,.55);
+            z-index: 9000;
+            align-items: center;
+            justify-content: center;
+        }
+        .alarm-overlay.open { display: flex; }
+        .alarm-modal {
+            background: white;
+            border-radius: 16px;
+            padding: 28px 28px 22px;
+            width: 360px;
+            max-width: 94vw;
+            box-shadow: 0 12px 40px rgba(0,0,0,.25);
+            text-align: center;
+            animation: alarm-pop .25s ease;
+        }
+        @keyframes alarm-pop {
+            from { transform: scale(.88); opacity: 0; }
+            to   { transform: scale(1);  opacity: 1; }
+        }
+        .alarm-icon { font-size: 40px; margin-bottom: 10px; }
+        .alarm-subject {
+            font-size: 11px;
+            font-weight: 700;
+            color: #007BFF;
+            text-transform: uppercase;
+            letter-spacing: .6px;
+            margin-bottom: 4px;
+        }
+        .alarm-topic {
+            font-size: 20px;
+            font-weight: 800;
+            color: #1a1a2e;
+            margin-bottom: 6px;
+        }
+        .alarm-time {
+            font-size: 13px;
+            color: #6c757d;
+            margin-bottom: 20px;
+        }
+        .alarm-stop-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 11px 32px;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            width: 100%;
+        }
+        .alarm-stop-btn:hover { background: #b02a37; }
     </style>
 </head>
 
@@ -201,7 +258,70 @@
     </aside>
     <div class="main">
         {% block content %}{% endblock %}
+    <div class="alarm-overlay" id="alarmOverlay">
+        <div class="alarm-modal">
+            <div class="alarm-icon">⏰</div>
+            <div class="alarm-subject" id="alarm-subject"></div>
+            <div class="alarm-topic" id="alarm-topic"></div>
+            <div class="alarm-time" id="alarm-time"></div>
+            <button class="alarm-stop-btn" onclick="stopAlarm()">Stop Alarm</button>
+        </div>
     </div>
+    <audio id="alarmAudio" src="/media/alarm_tone/alarm.mp3" loop></audio>
+
+    <script>
+        var _alarmFired = {};
+        var _alarmAudio = document.getElementById('alarmAudio');
+        var _alarmQueue = [];
+
+        function _showNextAlarm() {
+            if (_alarmQueue.length === 0) return;
+            var s = _alarmQueue.shift();
+            document.getElementById('alarm-subject').textContent = s.subject_name;
+            document.getElementById('alarm-topic').textContent = s.topic_name;
+            document.getElementById('alarm-time').textContent = s.start_time + ' – ' + s.end_time;
+            document.getElementById('alarmOverlay').classList.add('open');
+            _alarmAudio.currentTime = 0;
+            _alarmAudio.play().catch(function(){});
+        }
+
+        function stopAlarm() {
+            _alarmAudio.pause();
+            _alarmAudio.currentTime = 0;
+            document.getElementById('alarmOverlay').classList.remove('open');
+            if (_alarmQueue.length > 0) {
+                setTimeout(_showNextAlarm, 400);
+            }
+        }
+
+        function _checkAlarms(sessions) {
+            var now = new Date();
+            var nowMin = now.getHours() * 60 + now.getMinutes();
+            sessions.forEach(function(s) {
+                if (_alarmFired[s.id]) return;
+                var parts = s.end_time.split(':');
+                if (parts.length < 2) return;
+                var endMin = parseInt(parts[0]) * 60 + parseInt(parts[1]);
+                if (nowMin >= endMin && nowMin <= endMin + 1) {
+                    _alarmFired[s.id] = true;
+                    _alarmQueue.push(s);
+                }
+            });
+            if (_alarmQueue.length > 0 && !document.getElementById('alarmOverlay').classList.contains('open')) {
+                _showNextAlarm();
+            }
+        }
+
+        function _pollAlarms() {
+            fetch('/alarm-check/')
+                .then(function(r){ return r.json(); })
+                .then(function(d){ _checkAlarms(d.sessions || []); })
+                .catch(function(){});
+        }
+
+        _pollAlarms();
+        setInterval(_pollAlarms, 20000);
+    </script>
 </body>
 
 </html>
