@@ -6,6 +6,7 @@ from .ai_scheduler import (
     get_sentiment_score, get_peak_window, get_subject_time_ratios, 
     get_global_avg_ratio, ai_prioritize_topics, has_enough_data, get_effective_ratio
 )
+from . import notes_engine
 from bson import ObjectId
 from datetime import datetime, timedelta, date
 import json
@@ -363,6 +364,7 @@ def topics_view(request, subject_id):
         sections_by_topic.setdefault(s['topic_id'], []).append(s)
     for t in topics:
         t['sections'] = sections_by_topic.get(t['id'], [])
+        t['has_notes'] = notes_engine.has_notes(t['id'], user_email)
 
     return render(request, 'topics.html', {
         'user': db['users'].find_one({'email': user_email}),
@@ -579,7 +581,6 @@ def generate_week_schedule(user_email, db, user, single_day=False, use_ai=False)
     if not topics:
         return
 
-    # Group topics by subject, preserving priority order within each subject
     subject_order = []
     subject_topics = {}
     for t in topics:
@@ -589,7 +590,6 @@ def generate_week_schedule(user_email, db, user, single_day=False, use_ai=False)
             subject_topics[sid] = []
         subject_topics[sid].append(t)
 
-    # Compute subject-level priority score (max of its topics)
     subject_scores = {}
     for sid in subject_order:
         subject_scores[sid] = max(max(t.get(score_key, 1), 1) for t in subject_topics[sid])
@@ -604,18 +604,13 @@ def generate_week_schedule(user_email, db, user, single_day=False, use_ai=False)
         daily_cap = max(session_dur * 2, round(total_remaining / num_days))
     daily_cap = min(daily_cap, day_window)
 
-    # Build day-to-subject assignment: each day gets ONE subject
-    # Assign days proportionally to subject priority scores
-    # Higher priority subject gets more days
     total_score = sum(subject_scores.values()) or 1
     day_assignments = []
     subject_day_counts = {sid: max(1, round(num_days * subject_scores[sid] / total_score)) for sid in subject_order}
 
-    # Fill day_assignments list respecting counts, cycling through subjects
     sid_cycle = []
     for sid in subject_order:
         sid_cycle.extend([sid] * subject_day_counts[sid])
-    # Trim or extend to exactly num_days
     while len(sid_cycle) < num_days:
         sid_cycle.append(subject_order[len(sid_cycle) % len(subject_order)])
     sid_cycle = sid_cycle[:num_days]
@@ -642,10 +637,8 @@ def generate_week_schedule(user_email, db, user, single_day=False, use_ai=False)
         if available_window < session_dur:
             continue
 
-        # Pick the assigned subject for this day; fallback to highest priority with remaining work
         assigned_sid = day_assignments[day_offset]
         if not any(topic_remaining[t['id']] > 0 for t in subject_topics.get(assigned_sid, [])):
-            # This subject is done, find next subject with remaining work
             assigned_sid = next(
                 (sid for sid in subject_order if any(topic_remaining[t['id']] > 0 for t in subject_topics[sid])),
                 None
@@ -657,7 +650,6 @@ def generate_week_schedule(user_email, db, user, single_day=False, use_ai=False)
         if not day_topics:
             break
 
-        # Schedule session_dur chunks for each topic in this subject, one at a time
         first_session = True
         for t in day_topics:
             if use_ai:
@@ -710,7 +702,6 @@ def generate_week_schedule(user_email, db, user, single_day=False, use_ai=False)
 
             if cur_min >= end_min_today:
                 break
-
 
 
 def complete_task(request):
@@ -977,3 +968,101 @@ def alarm_check_view(request):
         })
     return JsonResponse({'sessions': sessions})
 
+
+def upload_topic_notes_view(request, topic_id):
+    if request.method != 'POST':
+        return redirect('subjects')
+    user_email = get_current_user(request)
+    if not user_email:
+        return redirect('login')
+
+    db = get_db()
+    topic = db['topics'].find_one({'_id': ObjectId(topic_id), 'user_email': user_email})
+    if not topic:
+        return redirect('subjects')
+
+    subject_id = topic.get('subject_id')
+
+    order_json = request.POST.get('file_order', '[]')
+    try:
+        order_list = json.loads(order_json)
+    except Exception:
+        order_list = []
+
+    uploaded_files = request.FILES.getlist('notes_files')
+    if not uploaded_files:
+        return redirect('topics', subject_id=subject_id)
+
+    files_by_name = {f.name: f for f in uploaded_files}
+
+    if order_list:
+        ordered_files = [files_by_name[name] for name in order_list if name in files_by_name]
+        remaining = [f for f in uploaded_files if f.name not in order_list]
+        ordered_files = ordered_files + remaining
+    else:
+        ordered_files = uploaded_files
+
+    import tempfile
+    import os as _os
+
+    tmp_paths = []
+    try:
+        for uf in ordered_files:
+            suffix = '.' + uf.name.rsplit('.', 1)[-1] if '.' in uf.name else ''
+            with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+                for chunk in uf.chunks():
+                    tmp.write(chunk)
+                tmp_paths.append((tmp.name, uf.name))
+
+        notes_engine.ingest_notes(topic_id, user_email, tmp_paths)
+    except Exception:
+        pass
+    finally:
+        for tmp_path, _ in tmp_paths:
+            try:
+                _os.unlink(tmp_path)
+            except Exception:
+                pass
+
+    return redirect('topics', subject_id=subject_id)
+
+
+def refer_view(request, topic_id):
+    user_email = get_current_user(request)
+    if not user_email:
+        return redirect('login')
+
+    db = get_db()
+    topic = db['topics'].find_one({'_id': ObjectId(topic_id), 'user_email': user_email})
+    if not topic:
+        return redirect('subjects')
+    fix_id(topic)
+
+    subject = db['subjects'].find_one({'_id': ObjectId(topic['subject_id']), 'user_email': user_email})
+    if subject:
+        fix_id(subject)
+
+    return render(request, 'refer.html', {
+        'user': db['users'].find_one({'email': user_email}),
+        'topic': topic,
+        'subject': subject,
+    })
+
+
+def notes_search_view(request, topic_id):
+    if request.method != 'POST':
+        return JsonResponse({'results': []})
+    user_email = get_current_user(request)
+    if not user_email:
+        return JsonResponse({'results': []})
+
+    query = request.POST.get('query', '').strip()
+    if not query:
+        return JsonResponse({'results': []})
+
+    try:
+        results = notes_engine.search_notes(topic_id, user_email, query)
+    except Exception:
+        results = []
+
+    return JsonResponse({'results': results})

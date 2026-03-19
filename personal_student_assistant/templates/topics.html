@@ -11,7 +11,6 @@
             overflow-x: hidden;
         }
 
-        /* Topbar Text Truncation Fix */
         .topbar-text {
             min-width: 0;
             flex: 1;
@@ -50,7 +49,6 @@
             gap: 16px;
         }
 
-        /* Banner Text Truncation Fix */
         .banner-text-wrap {
             min-width: 0;
             flex: 1;
@@ -179,7 +177,6 @@
             background: var(--primary-d);
         }
 
-        /* Desktop Table View */
         .table-container {
             width: 100%;
             display: block;
@@ -216,7 +213,6 @@
             background: #fafcff;
         }
 
-        /* Mobile Card View (Hidden by default) */
         .mobile-topics-container {
             display: none;
             flex-direction: column;
@@ -657,7 +653,6 @@
                 align-items: flex-start;
             }
             
-            /* Add Topic Collapse/Expand styling */
             .collapsible-body {
                 display: none;
             }
@@ -679,7 +674,6 @@
                 grid-column: auto;
             }
 
-            /* Switch to Card View for Topics */
             .table-container {
                 display: none;
             }
@@ -696,6 +690,212 @@
             .modal {
                 padding: 20px;
             }
+        }
+
+        .notes-bar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px dashed #e2d9f3;
+            flex-wrap: wrap;
+        }
+
+        .btn-notes-upload {
+            background: #e8f5e9;
+            color: #2e7d32;
+            border: 1px solid #a5d6a7;
+            padding: 5px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        .btn-notes-upload:hover { background: #c8e6c9; }
+
+        .btn-refer {
+            background: #e3f2fd;
+            color: #1565c0;
+            border: 1px solid #90caf9;
+            padding: 5px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            white-space: nowrap;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .btn-refer:hover { background: #bbdefb; color: #1565c0; }
+
+        .notes-upload-hint {
+            font-size: 11px;
+            color: var(--muted);
+        }
+
+        .notes-modal {
+            max-width: 560px;
+        }
+
+        .notes-drop-zone {
+            border: 2px dashed #ced4da;
+            border-radius: 10px;
+            padding: 22px 16px;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color .2s, background .2s;
+            margin-bottom: 14px;
+        }
+        .notes-drop-zone:hover, .notes-drop-zone.drag-over {
+            border-color: var(--primary);
+            background: var(--primary-l);
+        }
+        .notes-drop-zone p {
+            margin: 0;
+            font-size: 13px;
+            color: var(--muted);
+        }
+        .notes-drop-zone strong {
+            color: var(--primary-d);
+        }
+
+        .notes-file-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-bottom: 14px;
+            max-height: 260px;
+            overflow-y: auto;
+        }
+
+        .notes-file-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 10px;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            background: #fafafa;
+            cursor: grab;
+            user-select: none;
+        }
+        .notes-file-item:active { cursor: grabbing; }
+        .notes-file-item.drag-over-item { border-color: var(--primary); background: var(--primary-l); }
+
+        .nfi-handle {
+            color: var(--muted);
+            font-size: 15px;
+            flex-shrink: 0;
+        }
+
+        .nfi-thumb {
+            width: 36px;
+            height: 36px;
+            border-radius: 5px;
+            object-fit: cover;
+            background: #e9ecef;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            overflow: hidden;
+        }
+        .nfi-thumb img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 5px;
+        }
+
+        .nfi-num {
+            background: var(--primary);
+            color: white;
+            font-size: 10px;
+            font-weight: 700;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .nfi-name {
+            flex: 1;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .nfi-remove {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--danger);
+            font-size: 14px;
+            padding: 2px 4px;
+            border-radius: 4px;
+            opacity: .6;
+            flex-shrink: 0;
+        }
+        .nfi-remove:hover { opacity: 1; background: #fff0f0; }
+
+        .notes-type-hint {
+            font-size: 12px;
+            color: var(--muted);
+            margin-bottom: 14px;
+        }
+
+        .notes-processing-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,.6);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .notes-processing-overlay.visible { display: flex; }
+
+        .notes-processing-box {
+            background: white;
+            border-radius: 14px;
+            padding: 32px 36px;
+            text-align: center;
+            box-shadow: 0 12px 40px rgba(0,0,0,.25);
+            min-width: 260px;
+        }
+
+        .notes-spinner {
+            width: 44px;
+            height: 44px;
+            border: 4px solid #e9ecef;
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin .8s linear infinite;
+            margin: 0 auto 16px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .notes-processing-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--primary-d);
+            margin-bottom: 6px;
+        }
+
+        .notes-processing-sub {
+            font-size: 13px;
+            color: var(--muted);
         }
 {% endblock %}
 
@@ -867,6 +1067,11 @@
                                                 <input type="text" name="section_name" placeholder="New section name..." required class="sec-inline-input">
                                                 <button type="submit" class="sec-inline-btn">+ Add</button>
                                             </form>
+                                            <div class="notes-bar">
+                                                <button type="button" class="btn-notes-upload" onclick="openNotesUpload('{{ topic.id }}')">📎 Upload Notes</button>
+                                                {% if topic.has_notes %}<a href="/topic-notes/{{ topic.id }}/refer/" class="btn-refer">🔍 Refer</a>{% endif %}
+                                                <span class="notes-upload-hint">{% if topic.has_notes %}Notes indexed · {% endif %}PDF or images</span>
+                                            </div>
                                         </div>
                                     </td>
                                 </tr>
@@ -950,6 +1155,11 @@
                                     <input type="text" name="section_name" placeholder="Add section..." required class="sec-inline-input">
                                     <button type="submit" class="sec-inline-btn">+ Add</button>
                                 </form>
+                                <div class="notes-bar">
+                                    <button type="button" class="btn-notes-upload" onclick="openNotesUpload('{{ topic.id }}')">📎 Upload Notes</button>
+                                    {% if topic.has_notes %}<a href="/topic-notes/{{ topic.id }}/refer/" class="btn-refer">🔍 Refer</a>{% endif %}
+                                    <span class="notes-upload-hint">{% if topic.has_notes %}Notes indexed · {% endif %}PDF or images</span>
+                                </div>
                             </div>
                         </div>
                         {% endfor %}
@@ -1027,6 +1237,36 @@
         </div>
     </div>
 
+    <div class="modal-overlay" id="notesUploadModal">
+        <div class="modal notes-modal">
+            <h3>Upload Notes</h3>
+            <div class="notes-type-hint">One PDF <strong>or</strong> multiple images — drag to set reading order before uploading.</div>
+            <div class="notes-drop-zone" id="notesDropZone" onclick="document.getElementById('notesFileInput').click()">
+                <p><strong>Click to choose files</strong> or drag &amp; drop here</p>
+                <p style="margin-top:6px;">PDF · PNG · JPG · JPEG · BMP · TIFF · WEBP</p>
+            </div>
+            <input type="file" id="notesFileInput" multiple accept=".pdf,.png,.jpg,.jpeg,.bmp,.tiff,.webp" style="display:none;">
+            <div class="notes-file-list" id="notesFileList"></div>
+            <div class="modal-actions">
+                <button type="button" class="btn-cancel" onclick="closeNotesUpload()">Cancel</button>
+                <button type="button" class="btn-save" id="notesUploadBtn" onclick="submitNotesUpload()" disabled>Upload &amp; Process</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="notes-processing-overlay" id="notesProcessingOverlay">
+        <div class="notes-processing-box">
+            <div class="notes-spinner"></div>
+            <div class="notes-processing-title">Processing Notes…</div>
+            <div class="notes-processing-sub" id="notesProcessingSub">Extracting text and building index</div>
+        </div>
+    </div>
+
+    <form method="POST" enctype="multipart/form-data" id="notesHiddenForm" style="display:none;">
+        {% csrf_token %}
+        <input type="hidden" name="file_order" id="notesFileOrder">
+    </form>
+
     <script>
         document.querySelectorAll('.stars').forEach(function(el) {
             var val = parseInt(el.dataset.val) || 0;
@@ -1086,7 +1326,6 @@
             }
         });
 
-        // Section drag-drop ordering
         function initSecDrag(listId, barId, topicId) {
             var list = document.getElementById(listId);
             if (!list) return;
@@ -1110,7 +1349,6 @@
                         var ti = Array.from(parent.children).indexOf(row);
                         if (si < ti) parent.insertBefore(dragSrc, row.nextSibling);
                         else parent.insertBefore(dragSrc, row);
-                        // Renumber priority badges
                         parent.querySelectorAll('.sec-priority-num').forEach(function(n, i) {
                             n.textContent = i + 1;
                         });
@@ -1129,11 +1367,179 @@
             document.getElementById('sec-order-form-' + topicId).submit();
         }
 
-        // Init drag for every topic's section list
         document.querySelectorAll('.sec-drag-list').forEach(function(list) {
             var topicId = list.id.replace('sec-list-', '').replace('mob-', '');
             var barId = list.id.replace('sec-list-', 'sec-bar-');
             initSecDrag(list.id, barId, topicId);
         });
+
+        // ---- Notes upload ----
+        var _notesTopicId = '';
+        var _notesFiles = [];
+        var _notesDragSrc = null;
+
+        function openNotesUpload(topicId) {
+            _notesTopicId = topicId;
+            _notesFiles = [];
+            document.getElementById('notesFileInput').value = '';
+            renderNotesFileList();
+            document.getElementById('notesUploadModal').classList.add('open');
+        }
+
+        function closeNotesUpload() {
+            document.getElementById('notesUploadModal').classList.remove('open');
+            _notesFiles = [];
+            _notesTopicId = '';
+        }
+
+        document.getElementById('notesUploadModal').addEventListener('click', function(e) {
+            if (e.target === this) closeNotesUpload();
+        });
+
+        document.getElementById('notesFileInput').addEventListener('change', function(e) {
+            addFiles(Array.from(e.target.files));
+            e.target.value = '';
+        });
+
+        var dropZone = document.getElementById('notesDropZone');
+        dropZone.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            dropZone.classList.add('drag-over');
+        });
+        dropZone.addEventListener('dragleave', function() {
+            dropZone.classList.remove('drag-over');
+        });
+        dropZone.addEventListener('drop', function(e) {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+            addFiles(Array.from(e.dataTransfer.files));
+        });
+
+        function addFiles(newFiles) {
+            var allowed = ['pdf','png','jpg','jpeg','bmp','tiff','webp'];
+            newFiles.forEach(function(f) {
+                var ext = f.name.split('.').pop().toLowerCase();
+                if (allowed.indexOf(ext) === -1) return;
+                var already = _notesFiles.some(function(x) { return x.name === f.name && x.size === f.size; });
+                if (!already) _notesFiles.push(f);
+            });
+            renderNotesFileList();
+        }
+
+        function removeNoteFile(idx) {
+            _notesFiles.splice(idx, 1);
+            renderNotesFileList();
+        }
+
+        function renderNotesFileList() {
+            var list = document.getElementById('notesFileList');
+            var btn = document.getElementById('notesUploadBtn');
+            list.innerHTML = '';
+            if (_notesFiles.length === 0) {
+                btn.disabled = true;
+                return;
+            }
+            btn.disabled = false;
+            _notesFiles.forEach(function(f, i) {
+                var item = document.createElement('div');
+                item.className = 'notes-file-item';
+                item.draggable = true;
+                item.dataset.idx = i;
+
+                var ext = f.name.split('.').pop().toLowerCase();
+                var isImg = ['png','jpg','jpeg','bmp','tiff','webp'].indexOf(ext) !== -1;
+
+                var thumbHtml = '';
+                if (isImg) {
+                    var url = URL.createObjectURL(f);
+                    thumbHtml = '<div class="nfi-thumb"><img src="' + url + '" alt=""></div>';
+                } else {
+                    thumbHtml = '<div class="nfi-thumb" style="font-size:20px;">📄</div>';
+                }
+
+                item.innerHTML =
+                    '<span class="nfi-handle">⠿</span>' +
+                    thumbHtml +
+                    '<span class="nfi-num">' + (i + 1) + '</span>' +
+                    '<span class="nfi-name" title="' + escHtml(f.name) + '">' + escHtml(f.name) + '</span>' +
+                    '<button type="button" class="nfi-remove" onclick="removeNoteFile(' + i + ')">✕</button>';
+
+                item.addEventListener('dragstart', function(e) {
+                    _notesDragSrc = item;
+                    e.dataTransfer.effectAllowed = 'move';
+                    setTimeout(function() { item.style.opacity = '0.4'; }, 0);
+                });
+                item.addEventListener('dragend', function() {
+                    item.style.opacity = '';
+                    list.querySelectorAll('.notes-file-item').forEach(function(el) {
+                        el.classList.remove('drag-over-item');
+                    });
+                    _notesDragSrc = null;
+                });
+                item.addEventListener('dragover', function(e) {
+                    e.preventDefault();
+                    if (_notesDragSrc && _notesDragSrc !== item) {
+                        item.classList.add('drag-over-item');
+                    }
+                });
+                item.addEventListener('dragleave', function() {
+                    item.classList.remove('drag-over-item');
+                });
+                item.addEventListener('drop', function(e) {
+                    e.preventDefault();
+                    item.classList.remove('drag-over-item');
+                    if (_notesDragSrc && _notesDragSrc !== item) {
+                        var fromIdx = parseInt(_notesDragSrc.dataset.idx);
+                        var toIdx = parseInt(item.dataset.idx);
+                        var moved = _notesFiles.splice(fromIdx, 1)[0];
+                        _notesFiles.splice(toIdx, 0, moved);
+                        renderNotesFileList();
+                    }
+                });
+
+                list.appendChild(item);
+            });
+        }
+
+        function submitNotesUpload() {
+            if (_notesFiles.length === 0 || !_notesTopicId) return;
+
+            var form = document.getElementById('notesHiddenForm');
+            form.action = '/topic-notes/' + _notesTopicId + '/upload/';
+
+            var oldInputs = form.querySelectorAll('input[name="notes_files"]');
+            oldInputs.forEach(function(el) { form.removeChild(el); });
+
+            var dt = new DataTransfer();
+            _notesFiles.forEach(function(f) { dt.items.add(f); });
+
+            var fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.name = 'notes_files';
+            fileInput.multiple = true;
+            fileInput.style.display = 'none';
+            fileInput.files = dt.files;
+            form.appendChild(fileInput);
+
+            document.getElementById('notesFileOrder').value = JSON.stringify(_notesFiles.map(function(f) { return f.name; }));
+
+            document.getElementById('notesUploadModal').classList.remove('open');
+
+            var sub = document.getElementById('notesProcessingSub');
+            if (_notesFiles.length === 1 && _notesFiles[0].name.toLowerCase().endsWith('.pdf')) {
+                sub.textContent = 'Reading PDF and building search index…';
+            } else {
+                sub.textContent = 'Running OCR on ' + _notesFiles.length + ' image' + (_notesFiles.length > 1 ? 's' : '') + ' and building index…';
+            }
+            document.getElementById('notesProcessingOverlay').classList.add('visible');
+
+            form.submit();
+        }
+
+        function escHtml(s) {
+            var d = document.createElement('div');
+            d.appendChild(document.createTextNode(s));
+            return d.innerHTML;
+        }
     </script>
 {% endblock %}

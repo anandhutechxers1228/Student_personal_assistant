@@ -16,4 +16,7 @@ urlpatterns = [
     path('daily-remark/', views.daily_remark_view, name='daily_remark'),
     path('history/', views.history_view, name='history'),
     path('alarm-check/', views.alarm_check_view, name='alarm_check'),
+    path('topic-notes/<str:topic_id>/upload/', views.upload_topic_notes_view, name='upload_topic_notes'),
+    path('topic-notes/<str:topic_id>/refer/', views.refer_view, name='topic_refer'),
+    path('topic-notes/<str:topic_id>/search/', views.notes_search_view, name='notes_search'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
