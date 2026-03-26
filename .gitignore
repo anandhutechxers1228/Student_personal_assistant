@@ -255,10 +255,13 @@ Thumbs.db
 
 
 __pycache__
-media
+# media
 .env
 
 PASI
 Scripts
 pyvenv.cfg
 .env
+chroma_db/
+
+
