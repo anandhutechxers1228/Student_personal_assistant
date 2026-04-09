@@ -70,20 +70,46 @@
         .btn-search:hover { background: var(--primary-d); }
         .btn-search:disabled { opacity: .6; cursor: default; }
 
-        .results-area {
-            margin-top: 4px;
+        .chat-area {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            margin-bottom: 20px;
         }
 
-        .result-card {
+        .chat-bubble-wrap {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .chat-user {
+            align-self: flex-end;
+            background: var(--primary);
+            color: white;
+            padding: 11px 16px;
+            border-radius: 16px 16px 4px 16px;
+            font-size: 14px;
+            max-width: 78%;
+            line-height: 1.5;
+            word-break: break-word;
+        }
+
+        .chat-assistant {
+            align-self: flex-start;
             background: white;
-            border-radius: 10px;
+            border: 1px solid #e2e8f0;
             box-shadow: 0 2px 8px rgba(0,0,0,.06);
-            padding: 16px 18px;
-            margin-bottom: 12px;
-            border-left: 4px solid var(--primary);
+            padding: 14px 18px;
+            border-radius: 4px 16px 16px 16px;
+            font-size: 14px;
+            max-width: 92%;
+            line-height: 1.7;
+            color: var(--text);
+            word-break: break-word;
         }
 
-        .result-rank {
+        .chat-assistant-label {
             font-size: 11px;
             font-weight: 700;
             color: var(--primary);
@@ -92,13 +118,15 @@
             margin-bottom: 6px;
         }
 
-        .result-text {
+        .searching-indicator {
+            display: none;
+            text-align: center;
+            padding: 28px;
+            color: var(--muted);
             font-size: 14px;
-            color: var(--text);
-            line-height: 1.65;
-            white-space: pre-wrap;
-            word-break: break-word;
         }
+
+        .searching-indicator.visible { display: block; }
 
         .empty-results {
             background: white;
@@ -118,25 +146,6 @@
             font-size: 13px;
         }
 
-        .searching-indicator {
-            display: none;
-            text-align: center;
-            padding: 28px;
-            color: var(--muted);
-            font-size: 14px;
-        }
-
-        .searching-indicator.visible { display: block; }
-
-        .results-header {
-            font-size: 12px;
-            font-weight: 700;
-            color: var(--muted);
-            text-transform: uppercase;
-            letter-spacing: .5px;
-            margin-bottom: 12px;
-        }
-
         .back-link {
             display: inline-flex;
             align-items: center;
@@ -149,10 +158,19 @@
         }
         .back-link:hover { text-decoration: underline; }
 
+        .chat-memory-note {
+            font-size: 11px;
+            color: var(--muted);
+            text-align: center;
+            margin-bottom: 8px;
+        }
+
         @media (max-width: 768px) {
             .content { padding: 16px; }
             .search-row { flex-direction: column; }
             .btn-search { width: 100%; }
+            .chat-user { max-width: 90%; }
+            .chat-assistant { max-width: 100%; }
         }
 {% endblock %}
 
@@ -174,19 +192,20 @@
 
             <div class="search-card">
                 <div class="search-row">
-                    <input type="text" class="search-input" id="referSearchInput" placeholder="Search your notes… e.g. 'explain the formula' or 'example of'"  autocomplete="off">
-                    <button class="btn-search" id="referSearchBtn" onclick="doSearch()">Search</button>
+                    <input type="text" class="search-input" id="referSearchInput" placeholder="Ask anything from your notes…" autocomplete="off">
+                    <button class="btn-search" id="referSearchBtn" onclick="doSearch()">Ask</button>
                 </div>
             </div>
 
-            <div class="searching-indicator" id="searchingIndicator">⏳ Searching…</div>
+            <div class="searching-indicator" id="searchingIndicator">⏳ Searching and summarizing…</div>
 
-            <div class="results-area" id="resultsArea"></div>
+            <div class="chat-area" id="chatArea"></div>
         </div>
 
     <script>
         var _topicId = '{{ topic.id }}';
         var _csrfToken = '{{ csrf_token }}';
+        var _chatHistory = [];
 
         document.getElementById('referSearchInput').addEventListener('keydown', function(e) {
             if (e.key === 'Enter') doSearch();
@@ -198,11 +217,12 @@
 
             var btn = document.getElementById('referSearchBtn');
             var indicator = document.getElementById('searchingIndicator');
-            var area = document.getElementById('resultsArea');
+            var area = document.getElementById('chatArea');
 
             btn.disabled = true;
             indicator.classList.add('visible');
-            area.innerHTML = '';
+
+            var historyToSend = _chatHistory.slice(-2);
 
             fetch('/topic-notes/' + _topicId + '/search/', {
                 method: 'POST',
@@ -210,30 +230,60 @@
                     'Content-Type': 'application/x-www-form-urlencoded',
                     'X-CSRFToken': _csrfToken,
                 },
-                body: 'query=' + encodeURIComponent(query),
+                body: 'query=' + encodeURIComponent(query) + '&chat_history=' + encodeURIComponent(JSON.stringify(historyToSend)),
             })
             .then(function(r) { return r.json(); })
             .then(function(data) {
                 btn.disabled = false;
                 indicator.classList.remove('visible');
+                document.getElementById('referSearchInput').value = '';
+
+                var answer = (data.answer || '').trim();
                 var results = data.results || [];
-                if (results.length === 0) {
-                    area.innerHTML = '<div class="empty-results"><p>No matching results found.</p><span>Try searching with different or more specific keywords.</span></div>';
+
+                if (!answer && results.length === 0) {
+                    var wrap = document.createElement('div');
+                    wrap.className = 'chat-bubble-wrap';
+                    wrap.innerHTML = '<div class="chat-user">' + escapeHtml(query) + '</div>' +
+                        '<div class="empty-results"><p>No matching results found.</p><span>Try searching with different or more specific keywords.</span></div>';
+                    area.appendChild(wrap);
+                    area.scrollTop = area.scrollHeight;
                     return;
                 }
-                var html = '<div class="results-header">Top ' + results.length + ' result' + (results.length > 1 ? 's' : '') + ' for &ldquo;' + escapeHtml(query) + '&rdquo;</div>';
-                results.forEach(function(r, i) {
-                    html += '<div class="result-card">';
-                    html += '<div class="result-rank">Result ' + (i + 1) + '</div>';
-                    html += '<div class="result-text">' + escapeHtml(r.text) + '</div>';
-                    html += '</div>';
-                });
-                area.innerHTML = html;
+
+                var displayAnswer = answer || results.map(function(r) { return r.text; }).join('\n\n');
+
+                _chatHistory.push({ user: query, assistant: displayAnswer });
+                if (_chatHistory.length > 2) {
+                    _chatHistory = _chatHistory.slice(-2);
+                }
+
+                var wrap = document.createElement('div');
+                wrap.className = 'chat-bubble-wrap';
+                wrap.innerHTML = '<div class="chat-user">' + escapeHtml(query) + '</div>' +
+                    '<div class="chat-assistant"><div class="chat-assistant-label">📚 StudyMate</div>' + escapeHtml(displayAnswer) + '</div>';
+                area.appendChild(wrap);
+                area.scrollTop = area.scrollHeight;
+
+                if (_chatHistory.length >= 1) {
+                    var note = document.getElementById('chatMemoryNote');
+                    if (!note) {
+                        note = document.createElement('div');
+                        note.id = 'chatMemoryNote';
+                        note.className = 'chat-memory-note';
+                        note.textContent = 'Remembering last 2 exchanges for context';
+                        area.insertBefore(note, area.firstChild);
+                    }
+                }
             })
             .catch(function() {
                 btn.disabled = false;
                 indicator.classList.remove('visible');
-                area.innerHTML = '<div class="empty-results"><p>Something went wrong.</p><span>Please try again.</span></div>';
+                var wrap = document.createElement('div');
+                wrap.className = 'chat-bubble-wrap';
+                wrap.innerHTML = '<div class="chat-user">' + escapeHtml(query) + '</div>' +
+                    '<div class="empty-results"><p>Something went wrong.</p><span>Please try again.</span></div>';
+                area.appendChild(wrap);
             });
         }
 

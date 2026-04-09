@@ -171,3 +171,16 @@ def search_notes(topic_id, user_email, query, top_k=8, rerank_top=4):
         return [{'text': doc, 'score': float(score)} for score, doc in ranked[:rerank_top]]
     except Exception:
         return []
+
+
+def summarize_with_groq(query, chunks, chat_history):
+    from llama_index.llms.groq import Groq
+    context = '\n\n'.join([c.get('text', '') if isinstance(c, dict) else str(c) for c in chunks])
+    history_text = ''
+    for turn in chat_history[-2:]:
+        history_text += 'User: {}\nAssistant: {}\n\n'.format(turn.get('user', ''), turn.get('assistant', ''))
+    system_prompt = 'You are a helpful study assistant. Answer the student\'s question using only the provided context from their personal notes. Be concise, accurate, and clear. Do not mention that you are using context or notes.'
+    full_prompt = '{}\n\n{}Context:\n{}\n\nQuestion: {}\nAnswer:'.format(system_prompt, history_text, context, query)
+    llm = Groq(model='llama-3.1-8b-instant', api_key=os.getenv('PLAYGROUND_API'), context_window=8192, temperature=0.2, max_tokens=512)
+    response = llm.complete(full_prompt)
+    return response.text.strip()
