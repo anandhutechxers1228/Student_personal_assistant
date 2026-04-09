@@ -1,9 +1,20 @@
 import os
+import re
+import json
+from sentence_transformers import SentenceTransformer
+from sentence_transformers.cross_encoder import CrossEncoder
+import chromadb
+from llama_index.llms.groq import Groq
+try:
+    import pytesseract
+    from PIL import Image
+except ImportError:
+    pass
+try:
+    from pdfminer.high_level import extract_text
+except ImportError:
+    pass
 
-_embedder = None
-_reranker = None
-_chroma_client = None
-_collection = None
 
 CHROMA_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'chroma_db')
 
@@ -14,7 +25,6 @@ TESSERACT_PATHS = [
     '/usr/local/bin/tesseract',
     '/opt/homebrew/bin/tesseract',
 ]
-
 
 def _configure_tesseract():
     try:
@@ -31,36 +41,31 @@ def _configure_tesseract():
     except Exception:
         return False
 
+_configure_tesseract()
+
+
+_embedder = SentenceTransformer('all-MiniLM-L6-v2')
+_reranker = CrossEncoder('cross-encoder/ms-marco-MiniLM-L-2-v2')
+
+os.makedirs(CHROMA_PATH, exist_ok=True)
+_chroma_client = chromadb.PersistentClient(path=CHROMA_PATH)
+_collection = _chroma_client.get_or_create_collection('topic_notes')
+
+llm = Groq(model='llama-3.1-8b-instant', api_key=os.getenv('PLAYGROUND_API'), context_window=8192, temperature=0.2, max_tokens=1024)
+
 
 def _get_embedder():
-    global _embedder
-    if _embedder is None:
-        from sentence_transformers import SentenceTransformer
-        _embedder = SentenceTransformer('all-MiniLM-L6-v2')
     return _embedder
 
-
 def _get_reranker():
-    global _reranker
-    if _reranker is None:
-        from sentence_transformers.cross_encoder import CrossEncoder
-        _reranker = CrossEncoder('cross-encoder/ms-marco-MiniLM-L-2-v2')
     return _reranker
 
-
 def _get_collection():
-    global _chroma_client, _collection
-    if _chroma_client is None:
-        import chromadb
-        os.makedirs(CHROMA_PATH, exist_ok=True)
-        _chroma_client = chromadb.PersistentClient(path=CHROMA_PATH)
-        _collection = _chroma_client.get_or_create_collection('topic_notes')
     return _collection
 
 
 def _extract_pdf(file_path):
     try:
-        from pdfminer.high_level import extract_text
         return extract_text(file_path) or ''
     except Exception:
         return ''
@@ -68,16 +73,12 @@ def _extract_pdf(file_path):
 
 def _extract_image(file_path):
     try:
-        import pytesseract
-        from PIL import Image
-        _configure_tesseract()
         return pytesseract.image_to_string(Image.open(file_path)) or ''
     except Exception:
         return ''
 
 
 def _split_into_sentences(text):
-    import re
     text = re.sub(r'\s+', ' ', text).strip()
     sentences = re.split(r'(?<=[.!?])\s+', text)
     return [s.strip() for s in sentences if s.strip()]
@@ -174,13 +175,76 @@ def search_notes(topic_id, user_email, query, top_k=8, rerank_top=4):
 
 
 def summarize_with_groq(query, chunks, chat_history):
-    from llama_index.llms.groq import Groq
     context = '\n\n'.join([c.get('text', '') if isinstance(c, dict) else str(c) for c in chunks])
     history_text = ''
     for turn in chat_history[-2:]:
         history_text += 'User: {}\nAssistant: {}\n\n'.format(turn.get('user', ''), turn.get('assistant', ''))
     system_prompt = 'You are a helpful study assistant. Answer the student\'s question using only the provided context from their personal notes. Be concise, accurate, and clear. Do not mention that you are using context or notes.'
     full_prompt = '{}\n\n{}Context:\n{}\n\nQuestion: {}\nAnswer:'.format(system_prompt, history_text, context, query)
-    llm = Groq(model='llama-3.1-8b-instant', api_key=os.getenv('PLAYGROUND_API'), context_window=8192, temperature=0.2, max_tokens=512)
     response = llm.complete(full_prompt)
     return response.text.strip()
+
+
+def generate_session_questions(topic_id, user_email, summary):
+    chunks = search_notes(topic_id, user_email, summary, top_k=5, rerank_top=3)
+    context = '\n\n'.join([c.get('text', '') if isinstance(c, dict) else str(c) for c in chunks])
+    prompt = f"Based on the following notes context, generate 2 short-answer questions to test the student's understanding of what they just studied: '{summary}'. Return ONLY a JSON array of strings containing the questions.\n\nContext:\n{context}"
+    response = llm.complete(prompt)
+    try:
+        return json.loads(response.text.strip())
+    except Exception:
+        return []
+
+
+def evaluate_session_answers(questions, answers, topic_id, user_email):
+    context_chunks = []
+    for q in questions:
+        context_chunks.extend(search_notes(topic_id, user_email, q, top_k=3, rerank_top=2))
+    context = '\n'.join(set([c.get('text', '') if isinstance(c, dict) else str(c) for c in context_chunks]))
+    
+    qa_pairs = ""
+    for q, a in zip(questions, answers):
+        qa_pairs += f"Q: {q}\nA: {a}\n\n"
+        
+    prompt = f"Evaluate the following answers based on the context notes. Give a score from 0 to 5 stars representing overall accuracy and understanding. Return ONLY a single integer between 0 and 5.\n\nContext:\n{context}\n\nAnswers:\n{qa_pairs}"
+    response = llm.complete(prompt)
+    try:
+        score = int(re.search(r'\d+', response.text.strip()).group())
+        return min(max(score, 0), 5)
+    except Exception:
+        return 0
+
+
+def generate_topic_exam(topic_id, user_email):
+    try:
+        collection = _get_collection()
+        user_topic = '{}_{}'.format(user_email, topic_id)
+        results = collection.get(where={'user_topic': user_topic})
+        docs = results['documents'] if results and 'documents' in results else []
+        context = '\n'.join(docs[:15]) 
+        
+        prompt = f"Based on the following topic notes, generate exactly 10 short-answer questions for a comprehensive topic exam. Return ONLY a JSON array of strings containing the questions.\n\nContext:\n{context}"
+        response = llm.complete(prompt)
+        return json.loads(response.text.strip())
+    except Exception:
+        return []
+
+
+def evaluate_topic_exam(questions, answers, topic_id, user_email):
+    try:
+        collection = _get_collection()
+        user_topic = '{}_{}'.format(user_email, topic_id)
+        results = collection.get(where={'user_topic': user_topic})
+        docs = results['documents'] if results and 'documents' in results else []
+        context = '\n'.join(docs[:20]) 
+
+        qa_pairs = ""
+        for q, a in zip(questions, answers):
+            qa_pairs += f"Q: {q}\nA: {a}\n\n"
+            
+        prompt = f"Evaluate the following 10 exam answers based on the context notes. Give a total score out of 100 representing overall accuracy. Return ONLY a single integer between 0 and 100.\n\nContext:\n{context}\n\nAnswers:\n{qa_pairs}"
+        response = llm.complete(prompt)
+        score = int(re.search(r'\d+', response.text.strip()).group())
+        return min(max(score, 0), 100)
+    except Exception:
+        return 0

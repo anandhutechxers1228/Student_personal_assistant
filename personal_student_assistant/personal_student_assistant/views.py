@@ -4,22 +4,19 @@ from django.contrib.auth.hashers import make_password, check_password
 from .db_connector import get_db
 from .ai_scheduler import (
     get_sentiment_score, get_peak_window, get_subject_time_ratios, 
-    get_global_avg_ratio, ai_prioritize_topics, has_enough_data, get_effective_ratio
+    get_global_avg_ratio, ai_prioritize_topics, advanced_ai_prioritize_topics, has_enough_data, get_effective_ratio
 )
 from . import notes_engine
 from bson import ObjectId
 from datetime import datetime, timedelta, date
 import json
 
-
 def get_current_user(request):
     return request.session.get('user_email')
-
 
 def fix_id(doc):
     doc['id'] = str(doc['_id'])
     return doc
-
 
 def calculate_streak(user_email, db):
     streak = 0
@@ -39,7 +36,6 @@ def calculate_streak(user_email, db):
             break
     return streak
 
-
 def get_priority_score(topic, subject):
     exam_date_str = subject.get('exam_date', '')
     try:
@@ -53,7 +49,6 @@ def get_priority_score(topic, subject):
     weightage_score = subject.get('weightage', 5) * 5
     return urgency + difficulty_score + weakness_score + weightage_score
 
-
 def award_badges(user_email, db):
     user = db['users'].find_one({'email': user_email})
     badges = list(user.get('badges', []))
@@ -63,19 +58,18 @@ def award_badges(user_email, db):
     points = user.get('points', 0)
     streak = calculate_streak(user_email, db)
     checks = [
-        (total_completed >= 1, 'First Task 🎯'),
-        (total_completed >= 10, 'Task Achiever 🏅'),
-        (total_completed >= 50, 'Study Champion 🏆'),
-        (points >= 100, '100 Points ⭐'),
-        (points >= 500, '500 Points 💎'),
-        (streak >= 3, '3-Day Streak 🔥'),
-        (streak >= 7, '7-Day Streak 🌟'),
+        (total_completed >= 1, 'First Task ЁЯОп'),
+        (total_completed >= 10, 'Task Achiever ЁЯПЕ'),
+        (total_completed >= 50, 'Study Champion ЁЯПЖ'),
+        (points >= 100, '100 Points тнР'),
+        (points >= 500, '500 Points ЁЯТО'),
+        (streak >= 3, '3-Day Streak ЁЯФе'),
+        (streak >= 7, '7-Day Streak ЁЯМЯ'),
     ]
     for condition, badge in checks:
         if condition and badge not in badges:
             badges.append(badge)
     db['users'].update_one({'email': user_email}, {'$set': {'badges': badges}})
-
 
 def _get_total_study_hours(user_email, db):
     total_min = 0
@@ -84,7 +78,6 @@ def _get_total_study_hours(user_email, db):
     }):
         total_min += ct.get('actual_minutes', ct.get('duration_minutes', 0))
     return round(total_min / 60, 1)
-
 
 def signup_view(request):
     if request.method == 'POST':
@@ -107,7 +100,6 @@ def signup_view(request):
         return redirect('home')
     return render(request, 'signup.html')
 
-
 def login_view(request):
     if request.method == 'POST':
         email = request.POST.get('email')
@@ -121,11 +113,9 @@ def login_view(request):
         return render(request, 'login.html', {'error': 'Invalid email or password'})
     return render(request, 'login.html')
 
-
 def logout_view(request):
     request.session.flush()
     return redirect('login')
-
 
 def home_view(request):
     user_email = get_current_user(request)
@@ -213,7 +203,6 @@ def home_view(request):
         'peak_window': peak_window,
     })
 
-
 def subjects_view(request):
     user_email = get_current_user(request)
     if not user_email:
@@ -266,7 +255,6 @@ def subjects_view(request):
         'user': db['users'].find_one({'email': user_email}),
         'subjects': subjects,
     })
-
 
 def topics_view(request, subject_id):
     user_email = get_current_user(request)
@@ -374,7 +362,6 @@ def topics_view(request, subject_id):
         'completed_topics': completed_topics,
     })
 
-
 def schedule_view(request):
     user_email = get_current_user(request)
     if not user_email:
@@ -403,11 +390,13 @@ def schedule_view(request):
             return redirect('schedule')
         elif action == 'generate_ai':
             user = db['users'].find_one({'email': user_email})
-            generate_week_schedule(user_email, db, user, use_ai=True)
+            ai_type = request.POST.get('ai_type', 'normal')
+            generate_week_schedule(user_email, db, user, use_ai=True, advanced_ai=(ai_type == 'advanced'))
             return redirect('schedule')
         elif action == 'generate_today_ai':
             user = db['users'].find_one({'email': user_email})
-            generate_week_schedule(user_email, db, user, single_day=True, use_ai=True)
+            ai_type = request.POST.get('ai_type', 'normal')
+            generate_week_schedule(user_email, db, user, single_day=True, use_ai=True, advanced_ai=(ai_type == 'advanced'))
             return redirect('schedule')
         elif action == 'clear':
             db['scheduled_tasks'].delete_many({
@@ -497,8 +486,7 @@ def schedule_view(request):
         'subject_remaining': subject_remaining,
     })
 
-
-def generate_week_schedule(user_email, db, user, single_day=False, use_ai=False):
+def generate_week_schedule(user_email, db, user, single_day=False, use_ai=False, advanced_ai=False):
     now = datetime.now()
     today = date.today()
 
@@ -566,7 +554,12 @@ def generate_week_schedule(user_email, db, user, single_day=False, use_ai=False)
                 ct.get('duration_minutes', 0)
                 for ct in completed_tasks_all if ct.get('topic_id') == t['id']
             )
-        topics = ai_prioritize_topics(topics, completed_tasks_all, recent_remarks, subject_ratios, subject_counts, global_avg)
+            
+        if advanced_ai:
+            topics = advanced_ai_prioritize_topics(topics, completed_tasks_all, recent_remarks, subject_ratios, subject_counts, global_avg, user_email, db)
+        else:
+            topics = ai_prioritize_topics(topics, completed_tasks_all, recent_remarks, subject_ratios, subject_counts, global_avg)
+            
         for t in topics:
             already_done = t.get('already_done_minutes', 0)
             ai_total = t.get('ai_estimated_minutes', int(t.get('estimated_hours', 1) * 60))
@@ -703,7 +696,6 @@ def generate_week_schedule(user_email, db, user, single_day=False, use_ai=False)
             if cur_min >= end_min_today:
                 break
 
-
 def complete_task(request):
     if request.method != 'POST':
         return redirect('home')
@@ -797,7 +789,6 @@ def complete_task(request):
         return JsonResponse(_ajax_resp)
     return redirect(redirect_to)
 
-
 def daily_remark_view(request):
     if request.method != 'POST':
         return redirect('home')
@@ -830,7 +821,6 @@ def daily_remark_view(request):
             'created_at': datetime.utcnow().isoformat(),
         })
     return redirect('home')
-
 
 def profile_view(request):
     user_email = get_current_user(request)
@@ -872,7 +862,6 @@ def profile_view(request):
                 return render(request, 'profile.html', _ctx({'error': 'Incorrect current password.'}))
 
     return render(request, 'profile.html', _ctx())
-
 
 def history_view(request):
     user_email = get_current_user(request)
@@ -943,7 +932,6 @@ def history_view(request):
         'chart_subject_hours': json.dumps([s['hours'] for s in subject_stats]),
     })
 
-
 def alarm_check_view(request):
     user_email = get_current_user(request)
     if not user_email:
@@ -967,7 +955,6 @@ def alarm_check_view(request):
             'end_time': t.get('end_time', ''),
         })
     return JsonResponse({'sessions': sessions})
-
 
 def upload_topic_notes_view(request, topic_id):
     if request.method != 'POST':
@@ -1026,7 +1013,6 @@ def upload_topic_notes_view(request, topic_id):
 
     return redirect('topics', subject_id=subject_id)
 
-
 def refer_view(request, topic_id):
     user_email = get_current_user(request)
     if not user_email:
@@ -1048,7 +1034,6 @@ def refer_view(request, topic_id):
         'subject': subject,
     })
 
-
 def notes_search_view(request, topic_id):
     if request.method != 'POST':
         return JsonResponse({'results': []})
@@ -1060,9 +1045,91 @@ def notes_search_view(request, topic_id):
     if not query:
         return JsonResponse({'results': []})
 
+    chat_history_raw = request.POST.get('chat_history', '[]')
+    try:
+        chat_history = json.loads(chat_history_raw)
+    except Exception:
+        chat_history = []
+
     try:
         results = notes_engine.search_notes(topic_id, user_email, query)
     except Exception:
         results = []
 
-    return JsonResponse({'results': results})
+    answer = ''
+    if results:
+        try:
+            answer = notes_engine.summarize_with_groq(query, results, chat_history)
+        except Exception:
+            answer = ''
+
+    return JsonResponse({'results': results, 'answer': answer})
+
+
+def generate_session_qa_view(request):
+    user_email = get_current_user(request)
+    if not user_email or request.method != 'POST':
+        return JsonResponse({'questions': []})
+    topic_id = request.POST.get('topic_id')
+    summary = request.POST.get('summary', '').strip()
+    if not topic_id or not summary:
+        return JsonResponse({'questions': []})
+    qs = notes_engine.generate_session_questions(topic_id, user_email, summary)
+    return JsonResponse({'questions': qs})
+
+
+def evaluate_session_qa_view(request):
+    user_email = get_current_user(request)
+    if not user_email or request.method != 'POST':
+        return JsonResponse({'score': 0})
+    
+    topic_id = request.POST.get('topic_id')
+    task_id = request.POST.get('task_id')
+    try:
+        questions = json.loads(request.POST.get('questions', '[]'))
+        answers = json.loads(request.POST.get('answers', '[]'))
+    except Exception:
+        return JsonResponse({'score': 0})
+        
+    score = notes_engine.evaluate_session_answers(questions, answers, topic_id, user_email)
+    
+    if task_id:
+        db = get_db()
+        db['scheduled_tasks'].update_one(
+            {'_id': ObjectId(task_id), 'user_email': user_email},
+            {'$set': {'session_stars': score}}
+        )
+    return JsonResponse({'score': score})
+
+
+def generate_topic_exam_view(request):
+    user_email = get_current_user(request)
+    if not user_email or request.method != 'POST':
+        return JsonResponse({'questions': []})
+    topic_id = request.POST.get('topic_id')
+    qs = notes_engine.generate_topic_exam(topic_id, user_email)
+    return JsonResponse({'questions': qs})
+
+
+def evaluate_topic_exam_view(request):
+    user_email = get_current_user(request)
+    if not user_email or request.method != 'POST':
+        return JsonResponse({'score': 0})
+    
+    topic_id = request.POST.get('topic_id')
+    try:
+        questions = json.loads(request.POST.get('questions', '[]'))
+        answers = json.loads(request.POST.get('answers', '[]'))
+    except Exception:
+        return JsonResponse({'score': 0})
+        
+    score = notes_engine.evaluate_topic_exam(questions, answers, topic_id, user_email)
+    
+    db = get_db()
+    db['topics'].update_one(
+        {'_id': ObjectId(topic_id), 'user_email': user_email},
+        {'$set': {'exam_score': score, 'status': 'completed'}}
+    )
+    db['users'].update_one({'email': user_email}, {'$inc': {'points': 15}})
+    award_badges(user_email, db)
+    return JsonResponse({'score': score})

@@ -1,10 +1,16 @@
 import numpy as np
-import nltk
-from nltk.sentiment.vader import SentimentIntensityAnalyzer
+import json
+import os
+import re
 from sklearn.linear_model import LinearRegression
 from sklearn.cluster import KMeans
+from llama_index.llms.groq import Groq
+import nltk
+from nltk.sentiment.vader import SentimentIntensityAnalyzer
 
 nltk.download('vader_lexicon', quiet=True)
+
+llm = Groq(model='llama-3.1-8b-instant', api_key=os.getenv('PLAYGROUND_API'), context_window=8192, temperature=0.2, max_tokens=1024)
 
 MIN_TASKS_LINEAR = 5
 MIN_TASKS_KMEANS = 10
@@ -117,6 +123,49 @@ def ai_prioritize_topics(topics, completed_tasks, recent_remarks, subject_ratios
             t['ai_priority_score'] = base
     topics.sort(key=lambda x: x['ai_priority_score'], reverse=True)
     return topics
+
+
+def advanced_ai_prioritize_topics(topics, completed_tasks, recent_remarks, subject_ratios, subject_counts, global_avg, user_email, db):
+    for t in topics:
+        exam_score = t.get('exam_score', -1)
+        session_scores = [ct.get('session_stars', 0) for ct in completed_tasks if ct.get('topic_id') == t['id'] and 'session_stars' in ct]
+        avg_session_score = sum(session_scores) / len(session_scores) if session_scores else -1
+        t['historical_exam_score'] = exam_score
+        t['avg_session_score'] = avg_session_score
+        t['base_priority'] = t.get('priority_score', 0)
+
+    prompt_data = json.dumps([{
+        'id': t['id'],
+        'name': t['name'],
+        'subject': t['subject_name'],
+        'difficulty': t.get('difficulty', 3),
+        'strength': t.get('self_strength', 3),
+        'base_priority': t['base_priority'],
+        'exam_score': t['historical_exam_score'],
+        'avg_session_score': t['avg_session_score']
+    } for t in topics])
+
+    prompt = f"Analyze the following topics and their associated scores (exam_score 0-100, session_score 0-5). Re-prioritize them based on weaknesses revealed by low exam or session scores, combined with their base difficulty and strength. Return ONLY a JSON list of topic IDs in their new priority order from highest priority to lowest.\n\nTopics:\n{prompt_data}"
+    
+    try:
+        response = llm.complete(prompt)
+        prioritized_ids = json.loads(response.text.strip())
+        id_to_topic = {t['id']: t for t in topics}
+        sorted_topics = [id_to_topic[tid] for tid in prioritized_ids if tid in id_to_topic]
+        
+        missing = [t for t in topics if t['id'] not in prioritized_ids]
+        sorted_topics.extend(missing)
+        
+        for idx, t in enumerate(sorted_topics):
+            t['ai_priority_score'] = 1000 - idx 
+            sid = t.get('subject_id', '')
+            estimated_minutes = t.get('estimated_hours', 1) * 60
+            subject_tasks = [ct for ct in completed_tasks if ct.get('subject_id') == sid]
+            t['ai_estimated_minutes'] = round(predict_topic_duration(subject_tasks, estimated_minutes))
+            
+        return sorted_topics
+    except Exception:
+        return ai_prioritize_topics(topics, completed_tasks, recent_remarks, subject_ratios, subject_counts, global_avg)
 
 
 def has_enough_data(completed_count, remarks_count):

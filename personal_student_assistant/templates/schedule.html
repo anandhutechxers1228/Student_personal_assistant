@@ -58,14 +58,14 @@
             letter-spacing: .5px;
         }
 
-        .form-group input {
+        .form-group input, .form-group select {
             padding: 9px 12px;
             border: 1px solid #ced4da;
             border-radius: 8px;
             font-size: 14px;
         }
 
-        .form-group input:focus {
+        .form-group input:focus, .form-group select:focus {
             outline: none;
             border-color: var(--primary);
         }
@@ -107,6 +107,33 @@
         .action-bar span {
             font-size: 13px;
             color: var(--muted);
+        }
+        
+        .ai-form-group {
+            display: flex;
+            align-items: stretch;
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .ai-form-group select {
+            border: none;
+            background: transparent;
+            padding: 0 12px;
+            font-size: 13px;
+            outline: none;
+            border-right: 1px solid #dee2e6;
+            border-radius: 0;
+            font-weight: 600;
+            color: #495057;
+        }
+        
+        .ai-form-group button {
+            border-radius: 0;
+            margin: 0;
+            padding: 10px 16px;
         }
 
         .week-grid {
@@ -309,8 +336,8 @@
             color: #3d1d8c;
         }
 
-        .tm-step1, .tm-step2 { }
-        .tm-step2 { display: none; }
+        .tm-step1, .tm-step2, .tm-step-qa-1, .tm-step-qa-2 { }
+        .tm-step2, .tm-step-qa-1, .tm-step-qa-2 { display: none; }
 
         .tm-step2-question {
             font-size: 14px;
@@ -406,6 +433,12 @@
             font-size: 11px;
             color: var(--muted);
         }
+        
+        .qa-textarea {
+            width: 100%; padding: 10px; border: 1px solid #ced4da; border-radius: 8px; font-size: 13px; resize: vertical; min-height: 60px; box-sizing: border-box; font-family: inherit; margin-bottom: 12px;
+        }
+        .qa-textarea:focus { outline: none; border-color: var(--primary); }
+        .qa-question-box { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 8px; padding: 10px 12px; font-size: 13px; color: var(--primary-d); font-weight: 600; margin-bottom: 10px; }
 
         @media (max-width: 768px) {
             .content {
@@ -418,8 +451,14 @@
                 flex-direction: column;
                 align-items: stretch;
             }
-            .action-bar form, .action-bar button {
+            .action-bar form, .action-bar button, .ai-form-group {
                 width: 100%;
+            }
+            .ai-form-group select {
+                width: 30%;
+            }
+            .ai-form-group button {
+                width: 70%;
             }
             
             .collapsible-body {
@@ -495,12 +534,24 @@
                 <form method="POST" onsubmit="return confirmGenerate(event)">
                     {% csrf_token %}
                     <input type="hidden" name="action" value="generate_ai">
-                    <button type="submit" class="btn-primary" style="background-color: #6f42c1;">Generate Week (AI)</button>
+                    <div class="ai-form-group">
+                        <select name="ai_type">
+                            <option value="normal">Normal AI</option>
+                            <option value="advanced">Advanced AI</option>
+                        </select>
+                        <button type="submit" class="btn-primary" style="background-color: #6f42c1;">Generate Week (AI)</button>
+                    </div>
                 </form>
                 <form method="POST" onsubmit="return confirmGenerate(event)">
                     {% csrf_token %}
                     <input type="hidden" name="action" value="generate_today_ai">
-                    <button type="submit" class="btn-primary" style="background-color: #6f42c1;">Generate Today (AI)</button>
+                    <div class="ai-form-group">
+                        <select name="ai_type">
+                            <option value="normal">Normal AI</option>
+                            <option value="advanced">Advanced AI</option>
+                        </select>
+                        <button type="submit" class="btn-primary" style="background-color: #6f42c1;">Generate Today (AI)</button>
+                    </div>
                 </form>
                 <form method="POST" onsubmit="return confirm('Clear all upcoming unfinished sessions?')">
                     {% csrf_token %}
@@ -552,6 +603,7 @@
                                 data-completed-section="{{ task.completed_section_name }}"
                                 data-actual-min="{{ task.actual_minutes }}"
                                 data-completed-at="{{ task.completed_at }}"
+                                data-session-stars="{{ task.session_stars|default:'' }}"
                                 {% endif %}>
                                 <div class="sb-time">{{ task.start_time }}-{{ task.end_time }}</div>
 
@@ -563,7 +615,7 @@
                                 <div class="sb-topic">{{ task.topic_name }}{% if task.ai_generated %}<span class="ai-badge">AI</span>{% endif %}</div>
                                 <div class="sb-dur">{{ task.duration_minutes }} min{% if task.completed and task.completed_section_name %} · <span class="sb-sec-name" style="color:#6f42c1;font-weight:600;">{{ task.completed_section_name }}</span>{% endif %}</div>
                                 {% if task.completed %}
-                                <div class="done-check">✓ Done</div>
+                                <div class="done-check">✓ Done {% if task.session_stars %} <span style="color:#ffc107;">★{{ task.session_stars }}</span>{% endif %}</div>
                                 {% else %}
                                 <div class="sb-markdone" style="width:100%;margin-top:6px;padding:4px;background:var(--primary-l);color:var(--primary-d);border-radius:6px;font-size:11px;font-weight:600;text-align:center;">Mark Done</div>
                                 {% endif %}
@@ -579,7 +631,6 @@
             </div>
         </div>
 
-    <!-- Task popup modal -->
     <div class="task-modal-overlay" id="taskModal">
         <div class="task-modal">
             <div class="tm-subject" id="tm-subject"></div>
@@ -588,7 +639,6 @@
 
             <div id="tm-section-area"></div>
 
-            <!-- Step 1: info + mark done -->
             <div class="tm-step1" id="tm-step1">
                 <div class="tm-btn-row">
                     <button class="tm-btn tm-btn-primary" id="tm-done-btn" onclick="handleDoneClick()">✓ Mark Done</button>
@@ -596,19 +646,36 @@
                 </div>
             </div>
 
-            <!-- Step 2: continue section? (only shown if topic has a section) -->
             <div class="tm-step2" id="tm-step2">
                 <div class="tm-step2-question">Did you complete <span id="tm-continue-name"></span>?</div>
                 <div class="tm-btn-row">
-                    <button class="tm-btn tm-btn-purple" style="flex:1;" onclick="submitTaskAjax('yes')">↩ Continue it</button>
-                    <button class="tm-btn tm-btn-success" style="flex:1;" onclick="submitTaskAjax('no')">✓ Yes, completed</button>
+                    <button class="tm-btn tm-btn-purple" style="flex:1;" onclick="handleSectionDecision('yes')">↩ Continue it</button>
+                    <button class="tm-btn tm-btn-success" style="flex:1;" onclick="handleSectionDecision('no')">✓ Yes, completed</button>
                 </div>
                 <div style="margin-top:10px;text-align:center;">
                     <button class="tm-btn tm-btn-outline" style="width:100%;font-size:12px;" onclick="closeTaskModal()">Cancel</button>
                 </div>
             </div>
 
-            <!-- Completed task details view -->
+            <div class="tm-step-qa-1" id="tm-step-qa-1">
+                <div class="tm-step2-question">What did you study? (Optional)</div>
+                <div style="font-size:12px;color:var(--muted);margin-bottom:10px;text-align:center;">We'll generate a quick 2-question quiz from your notes based on this summary to test your knowledge!</div>
+                <textarea class="qa-textarea" id="qa-summary" placeholder="e.g., I studied Newton's second law..."></textarea>
+                <div class="tm-btn-row">
+                    <button class="tm-btn tm-btn-primary" onclick="generateSessionQuestions()">Get Quiz</button>
+                    <button class="tm-btn tm-btn-outline" onclick="submitTaskAjax('')">Skip</button>
+                </div>
+            </div>
+
+            <div class="tm-step-qa-2" id="tm-step-qa-2">
+                <div class="tm-step2-question">Quick Knowledge Check</div>
+                <div id="qa-questions-container"></div>
+                <div class="tm-btn-row">
+                    <button class="tm-btn tm-btn-success" onclick="submitSessionAnswers()">Submit Answers</button>
+                    <button class="tm-btn tm-btn-outline" onclick="submitTaskAjax('')">Skip</button>
+                </div>
+            </div>
+
             <div id="tm-step-done" style="display:none;">
                 <div id="tm-done-detail"></div>
                 <div style="margin-top:14px;text-align:center;">
@@ -630,6 +697,7 @@
         }
 
         var currentTaskData = {};
+        var generatedQuestions = [];
 
         function openTaskModal(el) {
             if (el.dataset.done === '1') {
@@ -640,11 +708,17 @@
                 document.getElementById('tm-section-area').innerHTML = '';
                 document.getElementById('tm-step1').style.display = 'none';
                 document.getElementById('tm-step2').style.display = 'none';
+                document.getElementById('tm-step-qa-1').style.display = 'none';
+                document.getElementById('tm-step-qa-2').style.display = 'none';
                 document.getElementById('tm-step-done').style.display = '';
                 var detailHtml = '';
                 var secName = el.dataset.completedSection;
                 if (secName) {
                     detailHtml += '<div class="tm-section-box"><div class="tm-section-label">📋 Section Covered</div><div class="tm-section-name">' + secName + '</div></div>';
+                }
+                var stars = el.dataset.sessionStars;
+                if (stars) {
+                    detailHtml += '<div style="margin-bottom:10px;text-align:center;font-size:14px;font-weight:700;">Quiz Score: <span style="color:#ffc107;">' + '★'.repeat(parseInt(stars)) + '</span></div>';
                 }
                 detailHtml += '<div style="font-size:13px;color:var(--muted);line-height:2;">';
                 var actualMin = el.dataset.actualMin;
@@ -663,6 +737,7 @@
 
             currentTaskData = {
                 taskId: el.dataset.taskId,
+                topicId: el.dataset.topicId,
                 subject: el.dataset.subject,
                 topic: el.dataset.topic,
                 time: el.dataset.time,
@@ -671,6 +746,7 @@
                 allSectionsComplete: el.dataset.allSectionsComplete === '1',
                 available: isPast,
                 el: el,
+                sectionContDecision: '' 
             };
 
             document.getElementById('tm-subject').textContent = currentTaskData.subject;
@@ -687,6 +763,8 @@
                 doneBtn.title = 'Available after session starts';
                 document.getElementById('tm-step1').style.display = '';
                 document.getElementById('tm-step2').style.display = 'none';
+                document.getElementById('tm-step-qa-1').style.display = 'none';
+                document.getElementById('tm-step-qa-2').style.display = 'none';
                 document.getElementById('tm-step-done').style.display = 'none';
                 document.getElementById('tm-done-detail').innerHTML = '';
                 document.getElementById('taskModal').classList.add('open');
@@ -698,6 +776,8 @@
                 document.getElementById('tm-continue-name').innerHTML = '"<strong>' + currentTaskData.sectionName + '</strong>"';
                 document.getElementById('tm-step1').style.display = 'none';
                 document.getElementById('tm-step2').style.display = 'block';
+                document.getElementById('tm-step-qa-1').style.display = 'none';
+                document.getElementById('tm-step-qa-2').style.display = 'none';
                 document.getElementById('tm-step-done').style.display = 'none';
                 document.getElementById('tm-done-detail').innerHTML = '';
             } else {
@@ -707,6 +787,8 @@
                 doneBtn.title = '';
                 document.getElementById('tm-step1').style.display = '';
                 document.getElementById('tm-step2').style.display = 'none';
+                document.getElementById('tm-step-qa-1').style.display = 'none';
+                document.getElementById('tm-step-qa-2').style.display = 'none';
                 document.getElementById('tm-step-done').style.display = 'none';
                 document.getElementById('tm-done-detail').innerHTML = '';
             }
@@ -720,8 +802,68 @@
                 document.getElementById('tm-step1').style.display = 'none';
                 document.getElementById('tm-step2').style.display = 'block';
             } else {
-                submitTaskAjax('');
+                document.getElementById('tm-step1').style.display = 'none';
+                document.getElementById('qa-summary').value = '';
+                document.getElementById('tm-step-qa-1').style.display = 'block';
             }
+        }
+        
+        function handleSectionDecision(cont) {
+            currentTaskData.sectionContDecision = cont;
+            document.getElementById('tm-step2').style.display = 'none';
+            document.getElementById('qa-summary').value = '';
+            document.getElementById('tm-step-qa-1').style.display = 'block';
+        }
+
+        function generateSessionQuestions() {
+            var summary = document.getElementById('qa-summary').value.trim();
+            if(!summary) {
+                submitTaskAjax(currentTaskData.sectionContDecision);
+                return;
+            }
+            document.getElementById('tm-step-qa-1').style.opacity = '0.5';
+            
+            var fd = new FormData();
+            fd.append('csrfmiddlewaretoken', csrfToken);
+            fd.append('topic_id', currentTaskData.topicId);
+            fd.append('summary', summary);
+            
+            fetch('/session-qa/generate/', {method:'POST', body:fd})
+                .then(r => r.json())
+                .then(d => {
+                    document.getElementById('tm-step-qa-1').style.opacity = '1';
+                    if(d.questions && d.questions.length > 0) {
+                        generatedQuestions = d.questions;
+                        var container = document.getElementById('qa-questions-container');
+                        container.innerHTML = '';
+                        d.questions.forEach((q, i) => {
+                            container.innerHTML += '<div class="qa-question-box">Q' + (i+1) + ': ' + q + '</div><textarea class="qa-textarea qa-answer" placeholder="Your answer..."></textarea>';
+                        });
+                        document.getElementById('tm-step-qa-1').style.display = 'none';
+                        document.getElementById('tm-step-qa-2').style.display = 'block';
+                    } else {
+                        submitTaskAjax(currentTaskData.sectionContDecision);
+                    }
+                }).catch(() => submitTaskAjax(currentTaskData.sectionContDecision));
+        }
+        
+        function submitSessionAnswers() {
+            document.getElementById('tm-step-qa-2').style.opacity = '0.5';
+            var answers = Array.from(document.querySelectorAll('.qa-answer')).map(el => el.value);
+            
+            var fd = new FormData();
+            fd.append('csrfmiddlewaretoken', csrfToken);
+            fd.append('topic_id', currentTaskData.topicId);
+            fd.append('task_id', currentTaskData.taskId);
+            fd.append('questions', JSON.stringify(generatedQuestions));
+            fd.append('answers', JSON.stringify(answers));
+            
+            fetch('/session-qa/evaluate/', {method:'POST', body:fd})
+                .then(r => r.json())
+                .then(d => {
+                    currentTaskData.sessionStars = d.score;
+                    submitTaskAjax(currentTaskData.sectionContDecision);
+                }).catch(() => submitTaskAjax(currentTaskData.sectionContDecision));
         }
 
         function submitTaskAjax(cont) {
@@ -740,11 +882,18 @@
                         var card = currentTaskData.el;
                         card.classList.add('completed');
                         card.dataset.done = '1';
+                        if(currentTaskData.sessionStars !== undefined) {
+                            card.dataset.sessionStars = currentTaskData.sessionStars;
+                        }
                         var md = card.querySelector('.sb-markdone');
                         if (md) {
                             md.className = 'done-check';
                             md.removeAttribute('style');
-                            md.textContent = '✓ Done';
+                            if(currentTaskData.sessionStars) {
+                                md.innerHTML = '✓ Done <span style="color:#ffc107;">★' + currentTaskData.sessionStars + '</span>';
+                            } else {
+                                md.textContent = '✓ Done';
+                            }
                         }
                         if (cont === 'no' && d.topic_id) {
                             var nextSecId = d.next_section_id || '';
