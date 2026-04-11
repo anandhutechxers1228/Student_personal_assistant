@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>DFD Level 2 — Schedule Generation</title>
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({ startOnLoad: true, theme: 'default' });
+</script>
+<style> body { font-family: Arial, sans-serif; text-align: center; margin: 20px; background: #fafafa; } </style>
+</head>
+<body>
+<h2>DATA FLOW DIAGRAM — LEVEL 2</h2>
+<p style="color: #555; font-size: 14px;">Explosion of Process 3.0 (Generate Schedule)</p>
+<div class="mermaid">
+flowchart TD
+    %% Custom Colors
+    classDef process fill:#e1f5fe,stroke:#03a9f4,stroke-width:2px;
+    classDef entity fill:#fff3e0,stroke:#ff9800,stroke-width:2px;
+    classDef store fill:#f3e5f5,stroke:#9c27b0,stroke-width:2px;
+    classDef note fill:#fcfcfc,stroke:#999,stroke-width:1px,stroke-dasharray: 4 4;
+
+    S[Student]:::entity
+
+    %% Input Stores at the top
+    D1[("D1 Users")]:::store
+    D2[("D2 Subjects")]:::store
+    D3[("D3 Topics")]:::store
+    D5_in[("D5 Tasks")]:::store
+
+    %% Core Process Line
+    P31(("3.1 Fetch & Score<br/>Pending Topics")):::process
+    P35(("3.5 Allocate Time<br/>Slots Per Day")):::process
+    P36(("3.6 Insert Sessions<br/>& Breaks to DB")):::process
+
+    %% AI Process Branch
+    subgraph AI_Logic ["AI Mode Only"]
+        direction TB
+        P32(("3.2 Sentiment<br/>Analysis")):::process
+        P33(("3.3 Predict Topic<br/>Duration")):::process
+        P34(("3.4 AI Prioritize<br/>Topics")):::process
+    end
+
+    %% Student and Top DBs into 3.1
+    S -- "generate request" --> P31
+    D1 -- "study window, durations" --> P31
+    D2 -- "exam_date, weightage" --> P31
+    D3 -- "pending topics list" --> P31
+    D5_in -- "completed_minutes" --> P31
+
+    %% Manual Route
+    P31 -- "sorted topics + remaining_min<br/>(manual mode)" ---> P35
+
+    %% AI Route
+    P31 -. "topics + completed history" .-> P34
+    D6_in[("D6 Remarks")]:::store -. "last 7 remarks" .-> P32
+    D5_ai[("D5 Tasks")]:::store -. "planned vs actual pairs" .-> P33
+    
+    P32 -. "mood_factor" .-> P34
+    P33 -. "ai_estimated_minutes" .-> P34
+    P34 -. "re-scored topics,<br/>adjusted remaining_min" .-> P35
+
+    %% Final Output Route
+    P35 -- "day assignments,<br/>topic_remaining, cur/end_min" --> P36
+    P36 -- "insert scheduled tasks" --> D5_out[("D5 Tasks")]:::store
+    P36 -- "redirect to schedule page" --> S
+
+    %% Logic Notes attached visually
+    N31["Priority Score Formula:<br/>urgency, difficulty, weakness"]:::note -.-> P31
+    N32["Sentiment Formula:<br/>VADER*0.4 + rating_norm*0.6"]:::note -.-> P32
+    N35["Slot Allocation:<br/>daily_cap = max(ses*2, total_rem/num_days)"]:::note -.-> P35
+
+</div>
+</body>
+</html>

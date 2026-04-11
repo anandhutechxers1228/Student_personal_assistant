@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>DFD Level 1 — Main Processes</title>
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({ startOnLoad: true, theme: 'default' });
+</script>
+<style> body { font-family: Arial, sans-serif; text-align: center; margin: 20px; background: #fafafa; } </style>
+</head>
+<body>
+<h2>DATA FLOW DIAGRAM — LEVEL 1</h2>
+<p style="color: #555; font-size: 14px;">Main Process Decomposition</p>
+<div class="mermaid">
+flowchart LR
+    %% Custom Colors
+    classDef process fill:#e1f5fe,stroke:#03a9f4,stroke-width:2px;
+    classDef entity fill:#fff3e0,stroke:#ff9800,stroke-width:2px;
+    classDef store fill:#f3e5f5,stroke:#9c27b0,stroke-width:2px;
+
+    subgraph CoreLoop ["Core Setup & Task Loop"]
+        direction LR
+        %% 1.0 Auth
+        S1[Student]:::entity -- "email, password" --> P1(("1.0 Authenticate<br/>User")):::process
+        P1 -- "session token" --> S1
+        P1 <-->|"verify user / get record"| D1a[("D1 Users")]:::store
+
+        %% 2.0 Manage Content
+        S2[Student]:::entity -- "subject, topic,<br/>section data" --> P2(("2.0 Manage Study<br/>Content")):::process
+        P2 <-->|"write/read"| D2a[("D2 Subjects")]:::store
+        P2 <-->|"write/read"| D3a[("D3 Topics")]:::store
+        P2 <-->|"write/read"| D4a[("D4 Sections")]:::store
+
+        %% 3.0 Generate Schedule
+        S3[Student]:::entity -- "generate request" --> P3(("3.0 Generate<br/>Schedule")):::process
+        P3 -- "generated schedule" --> S3
+        D1b[("D1 Users")]:::store -- "study_start, end, duration" --> P3
+        D2b[("D2 Subjects")]:::store -- "exam date, weightage" --> P3
+        D3b[("D3 Topics")]:::store -- "pending topics, est_hours" --> P3
+        D5a[("D5 Tasks")]:::store -- "completed task history" --> P3
+        D6a[("D6 Remarks")]:::store -- "recent remarks" --> P3
+        P3 -- "new scheduled tasks" --> D5a
+
+        %% 4.0 Complete Tasks
+        S4[Student]:::entity -- "task_id, actual time" --> P4(("4.0 Complete Tasks")):::process
+        P4 -- "updated points, badges" --> S4
+        P4 <-->|"mark completed / read today's"| D5b[("D5 Tasks")]:::store
+        P4 <-->|"next section / mark section done"| D4b[("D4 Sections")]:::store
+        P4 -- "add points, badges" --> D1c[("D1 Users")]:::store
+    end
+
+    subgraph Anytime ["Independent On-Demand Features (Available Anytime)"]
+        direction LR
+        %% 5.0 Manage Notes
+        S5[Student]:::entity -- "PDF/images, search query" --> P5(("5.0 Manage Notes<br/>(RAG)")):::process
+        P5 -- "ranked text chunks" --> S5
+        P5 -- "validate topic_id" --> D3c[("D3 Topics")]:::store
+        P5 <-->|"store & retrieve chunks"| D7[("D7 Notes Index")]:::store
+
+        %% 6.0 Track Daily
+        S6[Student]:::entity -- "rating (1-5), remark" --> P6(("6.0 Track Daily<br/>Mood")):::process
+        P6 <-->|"check existing / save daily_score"| D6b[("D6 Remarks")]:::store
+
+        %% 7.0 Analytics
+        S7[Student]:::entity -- "history/analytics request" --> P7(("7.0 View<br/>Analytics")):::process
+        P7 -- "history, charts, stats" --> S7
+        D5c[("D5 Tasks")]:::store -- "completed sessions" --> P7
+        D1d[("D1 Users")]:::store -- "user stats, points" --> P7
+    end
+</div>
+</body>
+</html>

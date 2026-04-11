@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>DFD Level 0 — Context Diagram</title>
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({ startOnLoad: true, theme: 'default' });
+</script>
+<style> body { font-family: Arial, sans-serif; text-align: center; margin: 30px; background: #fafafa; } </style>
+</head>
+<body>
+<h2>DATA FLOW DIAGRAM — LEVEL 0</h2>
+<p style="color: #555; font-size: 14px;">Context Diagram | Personal Student Assistant System</p>
+<div class="mermaid">
+flowchart LR
+    %% Custom Colors
+    classDef process fill:#e1f5fe,stroke:#03a9f4,stroke-width:2px;
+    classDef entity fill:#fff3e0,stroke:#ff9800,stroke-width:2px;
+    classDef store fill:#f3e5f5,stroke:#9c27b0,stroke-width:2px;
+
+    Student["Student<br/>(End User)"]:::entity
+    System(("0.0<br/>Personal Student<br/>Assistant System")):::process
+    DB[("Internal Data Stores<br/>(MongoDB & ChromaDB)")]:::store
+
+    Student -- "Credentials<br/>Study Data<br/>Schedule Preferences, Notes<br/>Task Completion, Ratings" --> System
+    System -- "Dashboard<br/>Generated Schedule<br/>Search Results<br/>Alarms & Badges" --> Student
+    System -. "Detailed in Level 1 & Level 2" .-> DB
+</div>
+</body>
+</html>
