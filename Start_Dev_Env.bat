@@ -1,0 +1,2 @@
+@echo off
+wt --title "Student Assistant" -d "C:\Student_personal_assistant\personal_student_assistant" powershell -NoExit -Command "& 'C:\Student_personal_assistant\PASI\Scripts\Activate.ps1' \; clear \; Write-Host '(PASI)' -NoNewline -ForegroundColor Green \; Write-Host ' PS C:\Student_personal_assistant\personal_student_assistant> python manage.py runserver 4000' \; python manage.py runserver 4000"

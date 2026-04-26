@@ -4,12 +4,15 @@ from django.contrib.auth.hashers import make_password, check_password
 from .db_connector import get_db
 from .ai_scheduler import (
     get_sentiment_score, get_peak_window, get_subject_time_ratios, 
-    get_global_avg_ratio, ai_prioritize_topics, advanced_ai_prioritize_topics, has_enough_data, get_effective_ratio
+    get_global_avg_ratio, ai_prioritize_topics, advanced_ai_prioritize_topics, has_enough_data, get_effective_ratio,
+    get_ai_session_params
 )
 from . import notes_engine
 from bson import ObjectId
 from datetime import datetime, timedelta, date
 import json
+import random
+import string
 
 def get_current_user(request):
     return request.session.get('user_email')
@@ -116,6 +119,20 @@ def login_view(request):
 def logout_view(request):
     request.session.flush()
     return redirect('login')
+
+def forgot_password_view(request):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Invalid request'})
+    email = request.POST.get('email', '').strip()
+    if not email:
+        return JsonResponse({'error': 'Email is required'})
+    db = get_db()
+    user = db['users'].find_one({'email': email})
+    if not user:
+        return JsonResponse({'error': 'No account found with this email'})
+    temp_password = ''.join(random.choices(string.ascii_letters + string.digits, k=10))
+    db['users'].update_one({'email': email}, {'$set': {'password': make_password(temp_password)}})
+    return JsonResponse({'temp_password': temp_password})
 
 def home_view(request):
     user_email = get_current_user(request)
@@ -500,6 +517,11 @@ def generate_week_schedule(user_email, db, user, single_day=False, use_ai=False,
     study_end = user.get('study_end_time', '22:00')
     session_dur = int(user.get('session_duration', 25))
     break_dur = int(user.get('break_duration', 5))
+
+    if advanced_ai:
+        _adv_completed = list(db['scheduled_tasks'].find({'user_email': user_email, 'completed': True, 'is_break': {'$ne': True}}))
+        _adv_remarks = list(db['daily_remarks'].find({'user_email': user_email}).sort('date', -1).limit(7))
+        session_dur, break_dur = get_ai_session_params(_adv_completed, _adv_remarks)
 
     sh, sm = map(int, study_start.split(':'))
     eh, em = map(int, study_end.split(':'))

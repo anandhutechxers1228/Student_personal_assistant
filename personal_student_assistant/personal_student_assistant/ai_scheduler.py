@@ -10,7 +10,14 @@ from nltk.sentiment.vader import SentimentIntensityAnalyzer
 
 nltk.download('vader_lexicon', quiet=True)
 
-llm = Groq(model='llama-3.1-8b-instant', api_key=os.getenv('PLAYGROUND_API'), context_window=8192, temperature=0.2, max_tokens=1024)
+llm = Groq(
+    model='llama-3.1-8b-instant', 
+    # model='llama-3.3-70b-versatile',
+    api_key=os.getenv('PLAYGROUND_API'), 
+    context_window=8192, 
+    temperature=0.2, 
+    max_tokens=1024
+)
 
 MIN_TASKS_LINEAR = 5
 MIN_TASKS_KMEANS = 10
@@ -170,3 +177,20 @@ def advanced_ai_prioritize_topics(topics, completed_tasks, recent_remarks, subje
 
 def has_enough_data(completed_count, remarks_count):
     return completed_count >= MIN_TASKS_LINEAR and remarks_count >= MIN_REMARKS_AI
+
+
+def get_ai_session_params(completed_tasks, recent_remarks):
+    mood = get_mood_factor(recent_remarks)
+    total_sessions = len(completed_tasks)
+    avg_actual = sum(t.get('actual_minutes', 0) for t in completed_tasks) / max(total_sessions, 1)
+    prompt = f"You are a study schedule optimizer. Based on the following student data, suggest optimal study session duration and break duration in minutes.\n\nStudent data:\n- Mood score (range -1 to 1, higher is better): {round(mood, 2)}\n- Total completed sessions: {total_sessions}\n- Average session duration: {round(avg_actual, 1)} minutes\n\nReturn ONLY a JSON object with two keys: 'session_duration' (integer, between 15 and 90) and 'break_duration' (integer, between 3 and 20)."
+    try:
+        response = llm.complete(prompt)
+        data = json.loads(response.text.strip())
+        session_dur = int(data.get('session_duration', 25))
+        break_dur = int(data.get('break_duration', 5))
+        session_dur = max(15, min(90, session_dur))
+        break_dur = max(3, min(20, break_dur))
+        return session_dur, break_dur
+    except Exception:
+        return 25, 5

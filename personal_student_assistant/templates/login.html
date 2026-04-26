@@ -76,6 +76,103 @@
             font-size: 14px;
             margin-bottom: 10px;
         }
+
+        .forgot-link {
+            text-align: center;
+            margin-top: 10px;
+            font-size: 13px;
+        }
+
+        .forgot-link a {
+            color: #6c757d;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .forgot-link a:hover {
+            color: #007BFF;
+            text-decoration: underline;
+        }
+
+        .fp-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 500;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .fp-overlay.open {
+            display: flex;
+        }
+
+        .fp-modal {
+            background: #ffffff;
+            padding: 32px;
+            border-radius: 10px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            width: 320px;
+            max-width: 92vw;
+        }
+
+        .fp-modal h3 {
+            color: #0056b3;
+            margin-bottom: 8px;
+            font-size: 18px;
+        }
+
+        .fp-modal p {
+            font-size: 13px;
+            color: #6c757d;
+            margin-bottom: 16px;
+        }
+
+        .fp-modal input {
+            margin: 0 0 14px 0;
+        }
+
+        .fp-result {
+            display: none;
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: 6px;
+            padding: 12px;
+            font-size: 13px;
+            color: #155724;
+            margin-bottom: 14px;
+            word-break: break-all;
+        }
+
+        .fp-error {
+            display: none;
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            border-radius: 6px;
+            padding: 10px;
+            font-size: 13px;
+            color: #721c24;
+            margin-bottom: 14px;
+        }
+
+        .fp-btn-row {
+            display: flex;
+            gap: 10px;
+        }
+
+        .fp-btn-row button {
+            margin-top: 0;
+        }
+
+        .fp-btn-cancel {
+            background: #f0f0f0 !important;
+            color: #333 !important;
+        }
+
+        .fp-btn-cancel:hover {
+            background: #e0e0e0 !important;
+        }
     </style>
 </head>
 
@@ -94,7 +191,79 @@
         <div class="link">
             Don't have an account? <a href="/signup/">Sign up here</a>
         </div>
+        <div class="forgot-link">
+            <a onclick="document.getElementById('fpOverlay').classList.add('open')">Forgot Password?</a>
+        </div>
     </div>
+
+    <div class="fp-overlay" id="fpOverlay">
+        <div class="fp-modal">
+            <h3>Reset Password</h3>
+            <p>Enter your registered email address. A temporary password will be shown to you.</p>
+            <div class="fp-error" id="fpError"></div>
+            <div class="fp-result" id="fpResult"></div>
+            <input type="email" id="fpEmailInput" placeholder="Enter your email" required>
+            <div class="fp-btn-row">
+                <button onclick="submitForgotPassword()">Reset</button>
+                <button class="fp-btn-cancel" onclick="closeFpModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function closeFpModal() {
+            document.getElementById('fpOverlay').classList.remove('open');
+            document.getElementById('fpEmailInput').value = '';
+            document.getElementById('fpError').style.display = 'none';
+            document.getElementById('fpResult').style.display = 'none';
+        }
+
+        document.getElementById('fpOverlay').addEventListener('click', function(e) {
+            if (e.target === this) closeFpModal();
+        });
+
+        function submitForgotPassword() {
+            var email = document.getElementById('fpEmailInput').value.trim();
+            var errEl = document.getElementById('fpError');
+            var resEl = document.getElementById('fpResult');
+            errEl.style.display = 'none';
+            resEl.style.display = 'none';
+
+            if (!email) {
+                errEl.textContent = 'Please enter your email address.';
+                errEl.style.display = 'block';
+                return;
+            }
+
+            var emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailPattern.test(email)) {
+                errEl.textContent = 'Please enter a valid email address.';
+                errEl.style.display = 'block';
+                return;
+            }
+
+            var fd = new FormData();
+            fd.append('email', email);
+            fd.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+            fetch('/forgot-password/', { method: 'POST', body: fd })
+                .then(function(r) { return r.json(); })
+                .then(function(d) {
+                    if (d.error) {
+                        errEl.textContent = d.error;
+                        errEl.style.display = 'block';
+                    } else {
+                        resEl.innerHTML = 'Your temporary password is:<br><strong>' + d.temp_password + '</strong><br><br>Login with this and change your password from Profile immediately.';
+                        resEl.style.display = 'block';
+                        document.getElementById('fpEmailInput').style.display = 'none';
+                    }
+                })
+                .catch(function() {
+                    errEl.textContent = 'Something went wrong. Please try again.';
+                    errEl.style.display = 'block';
+                });
+        }
+    </script>
 </body>
 
 </html>
